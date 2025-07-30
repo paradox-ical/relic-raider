@@ -21,63 +21,12 @@ const {
 const { simulateExploration, addItemsToInventory, calculateTotalValue } = require('./loot-system');
 const AchievementSystem = require('./achievement-system');
 const { getItemEmoji, getRarityEmoji } = require('./emoji-config');
-
-// Ensure global battle state is always initialized at module load
-if (!global.activeBattles) {
-  global.activeBattles = new Map();
-  console.log('[INIT] global.activeBattles initialized at module load');
-}
-if (!global.encounterBeasts) {
-  global.encounterBeasts = new Map();
-  console.log('[INIT] global.encounterBeasts initialized at module load');
-}
-
-// Helper function to safely defer interactions
-async function safeDeferUpdate(interaction) {
-  try {
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferUpdate();
-    }
-  } catch (error) {
-    if (error.code === 10062) {
-      console.warn(`[Button] Interaction already expired. Skipping: ${interaction.customId}`);
-      return false;
-    } else if (error.code === 40060) {
-      console.warn(`[Button] Interaction already acknowledged. Skipping: ${interaction.customId}`);
-      return false;
-    }
-    throw error;
-  }
-  return true;
-}
+const { handleButtonError } = require('./interaction-utils');
 
 async function handleButtonInteraction(interaction) {
   const { customId } = interaction;
   
-  // Check if interaction is still valid
-  if (!interaction.isButton()) {
-    return;
-  }
-  
-  // Ensure global.activeBattles is always initialized
-  if (!global.activeBattles) {
-    global.activeBattles = new Map();
-    console.log('[INIT] global.activeBattles initialized:', typeof global.activeBattles);
-  }
-  
   try {
-    // Defer the interaction immediately to prevent timeout
-    console.log(`[DEBUG] Processing button: ${customId}`);
-    const deferSuccess = await safeDeferUpdate(interaction);
-    if (!deferSuccess) {
-      console.log(`[DEBUG] Defer failed for: ${customId}`);
-      return;
-    }
-    
-    // Debug log to track interaction state
-    console.log(`[${customId}] replied=${interaction.replied}, deferred=${interaction.deferred}`);
-    
-    // safe to do long async operations now...
     // Handle branch view buttons
     if (customId.startsWith('view_branch_')) {
       await handleViewBranch(interaction);
@@ -122,13 +71,21 @@ async function handleButtonInteraction(interaction) {
     
     // Handle empty slot buttons (do nothing)
     if (customId.startsWith('empty_slot_')) {
-      await safeDeferUpdate(interaction);
+      try {
+        await interaction.deferUpdate();
+      } catch (error) {
+        console.error('Error deferring update for empty slot:', error);
+      }
       return;
     }
     
     // Handle ultimate not equipped button (do nothing)
     if (customId === 'ultimate_not_equipped') {
-      await safeDeferUpdate(interaction);
+      try {
+        await interaction.deferUpdate();
+      } catch (error) {
+        console.error('Error deferring update for ultimate not equipped:', error);
+      }
       return;
     }
     
@@ -303,9 +260,7 @@ async function handleButtonInteraction(interaction) {
         await handleClose(interaction);
         break;
       case 'battle_fight':
-        console.log('[DEBUG] battle_fight button clicked, starting handleBattleFight');
         await handleBattleFight(interaction);
-        console.log('[DEBUG] handleBattleFight completed');
         break;
       case 'battle_flee':
         await handleBattleFlee(interaction);
@@ -314,10 +269,7 @@ async function handleButtonInteraction(interaction) {
         await handleBattleFleeDuringBattle(interaction);
         break;
       case 'battle_action_attack':
-        console.log('[DEBUG] battle_action_attack button clicked');
-        console.log('[DEBUG] global.activeBattles size before attack:', global.activeBattles ? global.activeBattles.size : 'null');
         await handleBattleAction(interaction, 'attack');
-        console.log('[DEBUG] battle_action_attack completed');
         break;
       case 'battle_action_defend':
         await handleBattleAction(interaction, 'defend');
@@ -500,24 +452,20 @@ async function handleButtonInteraction(interaction) {
         }
     }
   } catch (error) {
-    console.error('Error handling button interaction:', error);
-    
-    // Only attempt reply if it's still valid
-    if (!interaction.replied && !interaction.deferred) {
-      try {
-        await interaction.reply({
-          content: '❌ Something went wrong.',
-          flags: 64
-        });
-      } catch (_) {
-        // Ignore any errors from the error response
-      }
-    }
+    await handleButtonError(interaction, error, customId);
   }
 }
 
 async function handleExplore(interaction) {
   try {
+    // Safely defer the update to prevent interaction timeout
+    const { safeDeferUpdate } = require('./interaction-utils');
+    const deferred = await safeDeferUpdate(interaction);
+    if (!deferred) {
+      console.error('Failed to defer update for explore button - interaction may have timed out');
+      return;
+    }
+    
     const discordId = interaction.user.id;
     
     // Get user
@@ -546,23 +494,12 @@ async function handleExplore(interaction) {
         cooldownMessage += `\n💡 Buy brushes from the shop to reduce cooldown!`;
       }
       
-      // Send cooldown as separate ephemeral message and maintain original embed
-      try {
-        // Send cooldown message as ephemeral
-        await interaction.followUp({ 
-          content: cooldownMessage,
-          ephemeral: true
-        });
-        
-        // Keep the original embed unchanged
-        return;
-      } catch (error) {
-        if (error.code === 10015) {
-          console.log('Unknown webhook (cooldown branch), skipping...');
-          return;
-        }
-        throw error;
-      }
+      // Send a private message that can be dismissed
+      await interaction.editReply({ 
+        content: cooldownMessage, 
+        flags: 64 
+      });
+      return;
     }
   
   // Get user's selected region
@@ -580,15 +517,7 @@ async function handleExplore(interaction) {
   });
   
   if (!currentZone) {
-    try {
-      return await interaction.editReply(`❌ Zone "${zoneName}" not found. Please run the database seed.`);
-    } catch (error) {
-      if (error.code === 10015) {
-        console.log('Unknown webhook error in zone error, skipping...');
-        return;
-      }
-      throw error;
-    }
+    return interaction.editReply(`❌ Zone "${zoneName}" not found. Please run the database seed.`);
   }
   
   // Get user's best map for drop rate multiplier
@@ -893,7 +822,6 @@ async function handleExplore(interaction) {
       global.encounterBeasts = new Map();
     }
     global.encounterBeasts.set(interaction.user.id, { beast: battleBeast, stats: beastStats });
-    console.log('[DEBUG] Stored encounter beast - Name:', battleBeast.name, 'Rarity:', battleBeast.rarity, 'ID:', battleBeast.id);
     
     await showBattleEncounter(interaction, user, battleBeast, foundItems, chestCoins, beastStats);
   } else {
@@ -910,19 +838,21 @@ async function handleExplore(interaction) {
       if (interaction.deferred && !interaction.replied) {
         await interaction.editReply({ content: '❌ An error occurred while exploring.' });
       }
-    } catch (err) {
-      if (err.code === 10015) {
-        console.log('Unknown webhook when sending error message');
-      } else {
-        throw err;
-      }
+    } catch (replyError) {
+      console.error('Error sending error response in handleExplore:', replyError);
     }
   }
 }
 
 async function handleCharacter(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    // Safely defer the update to prevent interaction timeout
+    const { safeDeferUpdate } = require('./interaction-utils');
+    const deferred = await safeDeferUpdate(interaction);
+    if (!deferred) {
+      console.error('Failed to defer update for character button - interaction may have timed out');
+      return;
+    }
     
     const userId = interaction.user.id;
     
@@ -970,21 +900,20 @@ async function handleCharacter(interaction) {
     
   } catch (error) {
     console.error('Error in character handler:', error);
-    try {
-      await interaction.editReply('❌ An error occurred while loading the character menu.');
-    } catch (err) {
-      if (err.code === 10015) {
-        console.log('Unknown webhook when sending error message');
-      } else {
-        throw err;
-      }
-    }
+    await interaction.editReply('❌ An error occurred while loading the character menu.');
   }
 }
 
 async function handleRegionsBosses(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    // Safely defer the update to prevent interaction timeout
+    const { safeDeferUpdate } = require('./interaction-utils');
+    const deferred = await safeDeferUpdate(interaction);
+    if (!deferred) {
+      console.error('Failed to defer update for regions/bosses button - interaction may have timed out');
+      return;
+    }
+    
     const userId = interaction.user.id;
     
     // Get user data
@@ -1041,7 +970,14 @@ async function handleRegionsBosses(interaction) {
 
 async function handleSkills(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    // Safely defer the update to prevent interaction timeout
+    const { safeDeferUpdate } = require('./interaction-utils');
+    const deferred = await safeDeferUpdate(interaction);
+    if (!deferred) {
+      console.error('Failed to defer update for skills button - interaction may have timed out');
+      return;
+    }
+    
     const userId = interaction.user.id;
     
     // Get user data
@@ -1207,45 +1143,47 @@ async function handleSkills(interaction) {
 }
 
 async function handleProfile(interaction) {
-  const discordId = interaction.user.id;
-  
-  // Get user data
-  let user = await prisma.user.findUnique({
-    where: { discordId: discordId },
-    include: {
-      inventoryItems: {
-        include: {
-          item: true
+  try {
+    // Defer the update immediately to prevent interaction timeout
+    await interaction.deferUpdate();
+    
+    const discordId = interaction.user.id;
+    
+    // Get user data
+    let user = await prisma.user.findUnique({
+      where: { discordId: discordId },
+      include: {
+        inventoryItems: {
+          include: {
+            item: true
+          }
         }
       }
-    }
-  });
-  
-  if (!user) {
-    await interaction.reply({ 
-      content: '❌ You need to start your adventure first! Use `/raid` to begin.', 
-      flags: 64 
     });
-    return;
-  }
+    
+    if (!user) {
+      await interaction.editReply({ 
+        content: '❌ You need to start your adventure first! Use `/raid` to begin.', 
+        flags: 64 
+      });
+      return;
+    }
 
-  // Check and award retroactive skill points
-  const SkillSystem = require('./skill-system');
-  const retroactivePoints = await SkillSystem.awardRetroactiveSkillPoints(user.id);
-  
-  // Refresh user data after potential skill point award
-  const updatedUser = await prisma.user.findUnique({
-    where: { discordId: discordId },
-    include: {
-      inventoryItems: {
-        include: {
-          item: true
+    // Check and award retroactive skill points
+    const SkillSystem = require('./skill-system');
+    const retroactivePoints = await SkillSystem.awardRetroactiveSkillPoints(user.id);
+    
+    // Refresh user data after potential skill point award
+    const updatedUser = await prisma.user.findUnique({
+      where: { discordId: discordId },
+      include: {
+        inventoryItems: {
+          include: {
+            item: true
+          }
         }
       }
-    }
-  });
-  
-  await safeDeferUpdate(interaction);
+    });
   
   // Get equipped title
   const equippedTitle = await AchievementSystem.getEquippedTitle(updatedUser.id);
@@ -1309,10 +1247,19 @@ async function handleProfile(interaction) {
     embeds: [embed],
     components: createProfileButtons()
   });
+  
+  } catch (error) {
+    console.error('Error in handleProfile:', error);
+    try {
+      await interaction.editReply('❌ An error occurred while loading your profile.');
+    } catch (replyError) {
+      console.error('Error sending error response:', replyError);
+    }
+  }
 }
 
 async function handleShop(interaction) {
-  await safeDeferUpdate(interaction);
+  await interaction.deferUpdate();
   
   const embed = new EmbedBuilder()
     .setColor('#ffd700')
@@ -1334,19 +1281,19 @@ async function handleShop(interaction) {
 
 async function handleShopBrushes(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    // Defer the update immediately to prevent interaction timeout
+    await interaction.deferUpdate();
     
     const discordId = interaction.user.id;
     
-    // Get user
-    let user = await prisma.user.findUnique({
-      where: { discordId: discordId }
-    });
+    // Get or create user using the centralized user management system
+    const UserManagement = require('./user-management');
+    const user = await UserManagement.getValidatedUser(discordId, interaction.user.username, interaction.guildId || null);
     
     if (!user) {
       await interaction.editReply({ 
         content: '❌ You need to start your adventure first! Use `/raid` to begin.', 
-        ephemeral: true 
+        flags: 64 
       });
       return;
     }
@@ -1386,7 +1333,7 @@ async function handleShopBrushes(interaction) {
     const canAfford = user.coins >= displayPrice;
     
     // Check if this brush is inferior to the best owned brush
-    const isInferior = bestOwnedBrush ? brush.tier <= bestOwnedBrush.brush.tier : false;
+    const isInferior = bestOwnedBrush && brush.tier <= bestOwnedBrush.brush.tier;
     
     let status = '';
     if (isOwned) {
@@ -1424,7 +1371,7 @@ async function handleShopBrushes(interaction) {
     const canAfford = user.coins >= displayPrice;
     
     // Check if this brush is inferior to the best owned brush
-    const isInferior = bestOwnedBrush ? brush.tier <= bestOwnedBrush.brush.tier : false;
+    const isInferior = bestOwnedBrush && brush.tier <= bestOwnedBrush.brush.tier;
     
     const button = new ButtonBuilder()
       .setCustomId(`buy_${brush.id}`)
@@ -1490,22 +1437,21 @@ async function handleShopBrushes(interaction) {
 
 async function handleShopMaps(interaction) {
   try {
-    await safeDeferUpdate(interaction);
-    
     const discordId = interaction.user.id;
     
-    // Get user
-    let user = await prisma.user.findUnique({
-      where: { discordId: discordId }
-    });
-  
-  if (!user) {
-    await interaction.editReply({ 
-      content: '❌ You need to start your adventure first! Use `/raid` to begin.', 
-      ephemeral: true 
-    });
-    return;
-  }
+    // Get or create user using the centralized user management system
+    const UserManagement = require('./user-management');
+    const user = await UserManagement.getValidatedUser(discordId, interaction.user.username, interaction.guildId || null);
+    
+    if (!user) {
+      await interaction.reply({ 
+        content: '❌ You need to start your adventure first! Use `/raid` to begin.', 
+        ephemeral: true 
+      });
+      return;
+    }
+    
+    await interaction.deferUpdate();
   
   // Get all maps
   const maps = await prisma.map.findMany({
@@ -1642,7 +1588,7 @@ async function handleShopMaps(interaction) {
 
 async function handleShopGear(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const embed = new EmbedBuilder()
       .setColor('#ffd700')
@@ -1652,31 +1598,47 @@ async function handleShopGear(interaction) {
     
     // Create navigation buttons with return to shop
     const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-  const navigationButtons = new ActionRowBuilder()
-    .addComponents(
-      new ButtonBuilder()
-        .setCustomId('shop')
-        .setLabel('🛒 Back to Shop')
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId('back')
-        .setLabel('🔙 Back to Menu')
-        .setStyle(ButtonStyle.Secondary)
-    );
-  
-  await interaction.editReply({
-    embeds: [embed],
-    components: [navigationButtons]
-  });
+    const navigationButtons = new ActionRowBuilder()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId('shop')
+          .setLabel('🛒 Back to Shop')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('back')
+          .setLabel('🔙 Back to Menu')
+          .setStyle(ButtonStyle.Secondary)
+      );
+    
+    await interaction.editReply({
+      embeds: [embed],
+      components: [navigationButtons]
+    });
   } catch (error) {
     console.error('Error in handleShopGear:', error);
-    // Don't try to send error responses to avoid interaction acknowledgment issues
+    
+    // Check if interaction has already been replied to or deferred
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({ 
+        content: '❌ An error occurred while loading the shop. Please try again.', 
+        ephemeral: true 
+      });
+    } else if (interaction.deferred && !interaction.replied) {
+      await interaction.editReply({ 
+        content: '❌ An error occurred while loading the shop. Please try again.' 
+      });
+    } else if (interaction.replied) {
+      await interaction.followUp({ 
+        content: '❌ An error occurred while loading the shop. Please try again.', 
+        ephemeral: true 
+      });
+    }
   }
 }
 
 async function handleShopSpecial(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const embed = new EmbedBuilder()
       .setColor('#ffd700')
@@ -1686,30 +1648,46 @@ async function handleShopSpecial(interaction) {
     
     // Create navigation buttons with return to shop
     const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-  const navigationButtons = new ActionRowBuilder()
-    .addComponents(
-      new ButtonBuilder()
-        .setCustomId('shop')
-        .setLabel('🛒 Back to Shop')
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId('back')
-        .setLabel('🔙 Back to Menu')
-        .setStyle(ButtonStyle.Secondary)
-    );
-  
-  await interaction.editReply({
-    embeds: [embed],
-    components: [navigationButtons]
-  });
+    const navigationButtons = new ActionRowBuilder()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId('shop')
+          .setLabel('🛒 Back to Shop')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('back')
+          .setLabel('🔙 Back to Menu')
+          .setStyle(ButtonStyle.Secondary)
+      );
+    
+    await interaction.editReply({
+      embeds: [embed],
+      components: [navigationButtons]
+    });
   } catch (error) {
     console.error('Error in handleShopSpecial:', error);
-    // Don't try to send error responses to avoid interaction acknowledgment issues
+    
+    // Check if interaction has already been replied to or deferred
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({ 
+        content: '❌ An error occurred while loading the shop. Please try again.', 
+        ephemeral: true 
+      });
+    } else if (interaction.deferred && !interaction.replied) {
+      await interaction.editReply({ 
+        content: '❌ An error occurred while loading the shop. Please try again.' 
+      });
+    } else if (interaction.replied) {
+      await interaction.followUp({ 
+        content: '❌ An error occurred while loading the shop. Please try again.', 
+        ephemeral: true 
+      });
+    }
   }
 }
 
 async function handleRegion(interaction) {
-  await safeDeferUpdate(interaction);
+  await interaction.deferUpdate();
   
   const discordId = interaction.user.id;
   
@@ -1845,23 +1823,22 @@ async function handleRegion(interaction) {
 }
 
 async function handleInventory(interaction) {
-  try {
-    await safeDeferUpdate(interaction);
-    
-    const discordId = interaction.user.id;
-    
-    // Get user first, then their inventory
-    const user = await prisma.user.findUnique({
-      where: { discordId: discordId }
+  const discordId = interaction.user.id;
+  
+  // Get user first, then their inventory
+  const user = await prisma.user.findUnique({
+    where: { discordId: discordId }
+  });
+  
+  if (!user) {
+    await interaction.reply({ 
+      content: '❌ You need to start your adventure first! Use `/raid` to begin.', 
+      ephemeral: true 
     });
-    
-    if (!user) {
-      await interaction.editReply({ 
-        content: '❌ You need to start your adventure first! Use `/raid` to begin.', 
-        ephemeral: true 
-      });
-      return;
-    }
+    return;
+  }
+  
+  await interaction.deferUpdate();
   
   // Get user's inventory and equipment
   const inventoryItems = await prisma.inventoryItem.findMany({
@@ -1950,46 +1927,18 @@ async function handleInventory(interaction) {
     embeds: [embed],
     components: [categoryButtons, actionButtons]
   });
-  } catch (error) {
-    console.error('Error in handleInventory:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while loading inventory.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
-  }
 }
 
 async function handleMenu(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const discordId = interaction.user.id;
     const username = interaction.user.username;
     
-    // Get user
-    let user = await prisma.user.findUnique({
-      where: { discordId: discordId }
-    });
-    
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          discordId: discordId,
-          username: username,
-          guildId: interaction.guildId || null,
-          level: 1,
-          experience: 0,
-          coins: 0,
-          tutorialCompleted: false
-        }
-      });
-    }
+    // Get or create user using the centralized user management system
+    const UserManagement = require('./user-management');
+    const user = await UserManagement.getValidatedUser(discordId, username, interaction.guildId || null);
 
     // Check if user needs tutorial
     const TutorialSystem = require('./tutorial-system');
@@ -2080,24 +2029,23 @@ async function handleTitles(interaction) {
 }
 
 async function handlePurchase(interaction, customId) {
-  try {
-    await safeDeferUpdate(interaction);
-    
-    const itemId = customId.replace('buy_', '');
-    const discordId = interaction.user.id;
-    
-    // Get user
-    let user = await prisma.user.findUnique({
-      where: { discordId: discordId }
+  const itemId = customId.replace('buy_', '');
+  const discordId = interaction.user.id;
+  
+  // Get user
+  let user = await prisma.user.findUnique({
+    where: { discordId: discordId }
+  });
+  
+  if (!user) {
+    await interaction.reply({ 
+      content: '❌ You need to start your adventure first! Use `/raid` to begin.', 
+      ephemeral: true 
     });
-    
-    if (!user) {
-      await interaction.editReply({ 
-        content: '❌ You need to start your adventure first! Use `/raid` to begin.', 
-        ephemeral: true 
-      });
-      return;
-    }
+    return;
+  }
+  
+  await interaction.deferUpdate();
   
   // Get the brush or map
   let brush = await prisma.brush.findUnique({
@@ -2213,21 +2161,8 @@ async function handlePurchase(interaction, customId) {
   
   await interaction.editReply({
     embeds: [embed],
-    components: [createNavigationButtons(false)]
+    components: [createNavigationButtons()]
   });
-  } catch (error) {
-    console.error('Error in handlePurchase:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while processing your purchase.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
-  }
 }
 
 async function handleRegionSelect(interaction, customId) {
@@ -2827,6 +2762,8 @@ async function handleSellAllCategory(interaction, customId) {
 
 // Leaderboard handler functions
 async function handleLeaderboardAll(interaction) {
+  await interaction.deferUpdate();
+  
   const embed = new EmbedBuilder()
     .setColor('#FFD700')
     .setTitle('🏆 Relic Raider Leaderboards')
@@ -2881,6 +2818,13 @@ async function handleLeaderboardAll(interaction) {
 }
 
 async function handleLeaderboardSpecific(interaction, type, scope = 'global') {
+  try {
+    await interaction.deferUpdate();
+  } catch (error) {
+    console.error('Failed to defer update:', error);
+    return;
+  }
+  
   let embed, title, description;
   let leaderboardData;
 
@@ -3150,6 +3094,8 @@ function formatLeaderboardField(title, data, type) {
 }
 
 async function handleLeaderboardToggle(interaction, scope) {
+  await interaction.deferUpdate();
+  
   const embed = new EmbedBuilder()
     .setColor('#FFD700')
     .setTitle('🏆 Relic Raider Leaderboards')
@@ -3206,7 +3152,13 @@ async function handleLeaderboardToggle(interaction, scope) {
 // Achievement view handlers
 async function handleAchievementsView(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    // Check if interaction is still valid
+    if (interaction.replied || interaction.deferred) {
+      console.log('Interaction already handled, skipping...');
+      return;
+    }
+    
+    await interaction.deferUpdate();
     
     const discordId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -3398,7 +3350,13 @@ async function handleAchievementsView(interaction) {
 
 async function handleTitlesView(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    // Check if interaction is still valid
+    if (interaction.replied || interaction.deferred) {
+      console.log('Interaction already handled, skipping...');
+      return;
+    }
+    
+    await interaction.deferUpdate();
     
     const discordId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -3603,7 +3561,13 @@ async function handleTitlesView(interaction) {
 
 async function handleProgressView(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    // Check if interaction is still valid
+    if (interaction.replied || interaction.deferred) {
+      console.log('Interaction already handled, skipping...');
+      return;
+    }
+    
+    await interaction.deferUpdate();
     
     const discordId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -3761,7 +3725,7 @@ async function handleProgressView(interaction) {
 // Handle individual achievement category view
 async function handleAchievementCategory(interaction, category, page = 0) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const discordId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -4001,7 +3965,7 @@ async function handleAchievementCategory(interaction, category, page = 0) {
 // Handle titles by rarity with pagination
 async function handleTitlesRarity(interaction, rarity, page = 0) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const discordId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -4153,7 +4117,7 @@ async function handleTitlesRarity(interaction, rarity, page = 0) {
 // Handle title equipping
 async function handleEquipTitle(interaction, titleId) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const discordId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -4239,7 +4203,7 @@ async function handleEquipTitle(interaction, titleId) {
 // Handle zone bosses view
 async function handleZoneBosses(interaction, page = 0) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const discordId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -4455,16 +4419,15 @@ async function handleZoneBosses(interaction, page = 0) {
     });
   } catch (error) {
     console.error('Error in handleZoneBosses:', error);
-    await interaction.editReply({
-      content: '❌ An error occurred while loading zone bosses.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
 // Handle challenges view
 async function handleChallengesView(interaction) {
   try {
+    await interaction.deferUpdate();
+    
     const discordId = interaction.user.id;
     const user = await prisma.user.findUnique({
       where: { discordId: discordId }
@@ -4583,16 +4546,7 @@ async function handleChallengesView(interaction) {
     });
   } catch (error) {
     console.error('Error in handleChallengesView:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while fetching challenges.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -4728,62 +4682,47 @@ async function showBattleEncounter(interaction, user, beast, foundItems, chestCo
 
 // Handle battle fight - initialize the battle
 async function handleBattleFight(interaction) {
-  try {
-    console.log('[DEBUG] handleBattleFight started');
-    const discordId = interaction.user.id;
-    console.log('[DEBUG] Discord ID:', discordId);
-    
-    // IMMEDIATELY check for stored encounter beast first
-    console.log('[DEBUG] Checking global.encounterBeasts:', global.encounterBeasts ? 'exists' : 'null');
-    let beast = null;
-    let storedStats = null;
-    
-    if (global.encounterBeasts && global.encounterBeasts.has(discordId)) {
-      console.log('[DEBUG] Found stored encounter for user');
-      const encounterData = global.encounterBeasts.get(discordId);
-      beast = encounterData.beast;
-      storedStats = encounterData.stats;
-      console.log('[DEBUG] Beast from storage:', beast?.name, beast?.rarity);
-      // DON'T delete yet - only after successful battle initialization
-    } else {
-      console.log('[DEBUG] No stored encounter, getting random beast');
-      // Fallback: get a random beast for the user's current zone
-      beast = await BattleSystem.getRandomBeastForRegion(user.currentZone || 'Jungle Ruins');
-      console.log('[DEBUG] Random beast:', beast?.name, beast?.rarity);
-    }
-    
-    if (!beast) {
-      console.log('[DEBUG] Beast not found');
-      await interaction.editReply({
-        content: '❌ Beast not found.',
-        ephemeral: true
-      });
-      return;
-    }
-    console.log('[DEBUG] Beast found:', beast.name, beast.rarity);
+  await interaction.deferUpdate();
+  
+  const discordId = interaction.user.id;
+  const user = await prisma.user.findUnique({
+    where: { discordId: discordId }
+  });
 
-    // Get user data AFTER we have the beast
-    const user = await prisma.user.findUnique({
-      where: { discordId: discordId }
+  if (!user) {
+    await interaction.editReply({
+      content: '❌ User not found.',
+      ephemeral: true
     });
+    return;
+  }
 
-    if (!user) {
-      console.log('[DEBUG] User not found');
-      await interaction.editReply({
-        content: '❌ User not found.',
-        ephemeral: true
-      });
-      return;
-    }
-        console.log('[DEBUG] User found:', user.id);
+  // Get the beast and stats from the stored encounter
+  const BattleSystem = require('./battle-system');
+  let beast = null;
+  let storedStats = null;
+  
+  if (global.encounterBeasts && global.encounterBeasts.has(discordId)) {
+    const encounterData = global.encounterBeasts.get(discordId);
+    beast = encounterData.beast;
+    storedStats = encounterData.stats;
+    // Remove from storage to prevent memory leaks
+    global.encounterBeasts.delete(discordId);
+  } else {
+    // Fallback: get a random beast for the user's current zone
+    beast = await BattleSystem.getRandomBeastForRegion(user.currentZone || 'Jungle Ruins');
+  }
+  
+  if (!beast) {
+    await interaction.editReply({
+      content: '❌ Beast not found.',
+      ephemeral: true
+    });
+    return;
+  }
 
-    // Get the BattleSystem
-    const BattleSystem = require('./battle-system');
-
-    // Initialize the battle with stored stats if available
-    console.log('[DEBUG] Initializing battle...');
-    const battleState = await BattleSystem.initializeBattle(user, beast, storedStats);
-    console.log('[DEBUG] Battle initialized, state:', battleState ? 'valid' : 'null');
+  // Initialize the battle with stored stats if available
+  const battleState = await BattleSystem.initializeBattle(user, beast, storedStats);
   
   // Store battle state in a simple way (in production, you'd want to use a proper cache/database)
   // For now, we'll store it in a global variable (not ideal but works for demo)
@@ -4791,42 +4730,17 @@ async function handleBattleFight(interaction) {
     global.activeBattles = new Map();
   }
   global.activeBattles.set(discordId, { battleState, beast, user });
-  console.log('[DEBUG] Battle stored in global.activeBattles, size:', global.activeBattles.size);
-  console.log('[DEBUG] Stored beast details - Name:', beast.name, 'Rarity:', beast.rarity, 'ID:', beast.id);
-  
-  // Now that battle is successfully initialized, we can safely remove the encounter beast
-  if (global.encounterBeasts && global.encounterBeasts.has(discordId)) {
-    console.log('[DEBUG] Removing encounter beast from storage after successful battle initialization');
-    global.encounterBeasts.delete(discordId);
-  }
   
   // Show the battle interface with action buttons
-  console.log('[DEBUG] Calling showBattleInterface...');
   await showBattleInterface(interaction, battleState, beast, user);
-  console.log('[DEBUG] showBattleInterface completed');
-  } catch (error) {
-    console.error('Error in handleBattleFight:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while starting the battle.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
-  }
 }
 
 // Show battle interface with action buttons
 async function showBattleInterface(interaction, battleState, beast, user) {
-  console.log('[DEBUG] showBattleInterface started');
   const BattleSystem = require('./battle-system');
   const { getBeastImage } = require('./beast-images');
   
   // Validate battle state
-  console.log('[DEBUG] Validating battle state:', battleState ? 'exists' : 'null');
   if (!battleState || !battleState.playerStats) {
     console.error('Invalid battle state or missing player stats:', battleState);
     await interaction.editReply({
@@ -4835,7 +4749,6 @@ async function showBattleInterface(interaction, battleState, beast, user) {
     });
     return;
   }
-  console.log('[DEBUG] Battle state is valid');
   
   // Create health bar function
   const createHealthBar = (current, max, length = 10) => {
@@ -4933,66 +4846,284 @@ async function showBattleInterface(interaction, battleState, beast, user) {
     embed.setImage(beastImageUrl || null) // Use setImage for larger display
     .setTimestamp();
 
-  // Add battle log if there are any actions (optimized)
+  // Add battle log if there are any actions
   if (battleState.battleLog.length > 0) {
     const lastRoundLogs = battleState.battleLog.filter(log => log.round === battleState.currentRound - 1);
     if (lastRoundLogs.length > 0) {
-      // Simplified battle log processing for better performance
-      const log = lastRoundLogs[0]; // Take the first log entry for simplicity
       let roundText = '';
+      let playerActionLogged = false;
+      let beastActionLogged = false;
       
-      // Player action summary
-      if (log.playerDodged) {
-        roundText += `👤 **You attack!** 🗡️\n🦴 ${beast.name} **DODGED!** 💨\n`;
-      } else if (log.playerDamage) {
-        const damageEmoji = log.playerCritical ? '💥' : '⚔️';
-        const criticalHit = log.playerCritical ? ' **CRITICAL!**' : '';
-        roundText += `👤 **You attack!** ${damageEmoji} ${log.playerDamage} damage${criticalHit}\n`;
-      } else if (log.playerDefended) {
-        roundText += `👤 **You defend!** 🛡️\n`;
-      } else if (log.playerSkill) {
-        roundText += `👤 **${log.skillName}!** ${log.playerDamage || 0} damage\n`;
-      }
+      lastRoundLogs.forEach(log => {
+        // Player actions (only log once per round)
+        if (!playerActionLogged) {
+          if (log.playerDodged) {
+            roundText += `👤 **You attack!** 🗡️\n🦴 ${beast.name} **DODGED!** 💨\n`;
+            playerActionLogged = true;
+          } else if (log.playerDamage) {
+            const damageEmoji = log.playerCritical ? '💥' : log.playerDamage >= 5 ? '⚔️' : '🗡️';
+            const criticalHit = log.playerCritical ? ' **CRITICAL!**' : '';
+            roundText += `👤 **You attack!** ${damageEmoji} ${log.playerDamage} damage${criticalHit}\n`;
+            // Add passive skill effects for attacks
+            if (log.passiveEffects && log.passiveEffects.length > 0) {
+              log.passiveEffects.forEach(effect => {
+                roundText += `✨ **${effect}**\n`;
+              });
+            }
+            
+            // Add weapon effects for attacks
+            if (log.weaponEffects && log.weaponEffects.length > 0) {
+              log.weaponEffects.forEach(effect => {
+                roundText += `${effect}\n`;
+              });
+            }
+            
+                    // Add status effects
+        if (log.statusEffects && log.statusEffects.length > 0) {
+          log.statusEffects.forEach(effect => {
+            roundText += `${effect}\n`;
+          });
+        }
+        
+        // Add healing effects if any occurred
+        if (log.playerHealing && log.playerHealing > 0) {
+          roundText += `💚 **Healing**: +${log.playerHealing} HP restored\n`;
+        }
+        
+        // Add beast status effects (poison, burn, bleed, etc.)
+        if (log.beastStatusEffects) {
+          for (const [effectType, effect] of Object.entries(log.beastStatusEffects)) {
+            if (effect.damage) {
+              let effectEmoji = '❓';
+              let effectName = effectType;
+              
+              switch (effectType) {
+                case 'bleed':
+                  effectEmoji = '🩸';
+                  effectName = 'Bleeding';
+                  break;
+                case 'poison':
+                  effectEmoji = '☠️';
+                  effectName = 'Poison';
+                  break;
+                case 'burn':
+                  effectEmoji = '🔥';
+                  effectName = 'Burning';
+                  break;
+                case 'freeze':
+                  effectEmoji = '❄️';
+                  effectName = 'Frozen';
+                  break;
+                case 'stun':
+                  effectEmoji = '💫';
+                  effectName = 'Stunned';
+                  break;
+              }
+              
+              roundText += `${effectEmoji} **${effectName}**: ${effect.damage} damage (${effect.duration} rounds left)\n`;
+            }
+          }
+        }
+            playerActionLogged = true;
+          } else if (log.playerDefended) {
+            roundText += `👤 **You defend!** 🛡️\n`;
+            // Add passive skill effects for defensive actions
+            if (log.passiveEffects && log.passiveEffects.length > 0) {
+              log.passiveEffects.forEach(effect => {
+                roundText += `💚 **${effect}** ✨\n`;
+              });
+            }
+            
+            // Add healing effects if any occurred
+            if (log.passiveHealing && log.passiveHealing > 0) {
+              roundText += `💚 **Passive Healing**: +${log.passiveHealing} HP\n`;
+            }
+            
+            // Add beast status effects if any are active
+            if (log.beastStatusEffects) {
+              for (const [effectType, effect] of Object.entries(log.beastStatusEffects)) {
+                if (effect.damage) {
+                  let effectEmoji = '❓';
+                  let effectName = effectType;
+                  
+                  switch (effectType) {
+                    case 'bleed':
+                      effectEmoji = '🩸';
+                      effectName = 'Bleeding';
+                      break;
+                    case 'poison':
+                      effectEmoji = '☠️';
+                      effectName = 'Poison';
+                      break;
+                    case 'burn':
+                      effectEmoji = '🔥';
+                      effectName = 'Burning';
+                      break;
+                    case 'freeze':
+                      effectEmoji = '❄️';
+                      effectName = 'Frozen';
+                      break;
+                    case 'stun':
+                      effectEmoji = '💫';
+                      effectName = 'Stunned';
+                      break;
+                  }
+                  
+                  roundText += `${effectEmoji} **${effectName}**: ${effect.damage} damage (${effect.duration} rounds left)\n`;
+                }
+              }
+            }
+            
+            playerActionLogged = true;
+          } else if (log.playerSpecial) {
+            roundText += `👤 **Special attack!** 💥 ${log.playerDamage} damage\n`;
+            
+            // Add status effects
+            if (log.statusEffects && log.statusEffects.length > 0) {
+              log.statusEffects.forEach(effect => {
+                roundText += `${effect}\n`;
+              });
+            }
+            
+            // Add beast status effects if any are active
+            if (log.beastStatusEffects) {
+              for (const [effectType, effect] of Object.entries(log.beastStatusEffects)) {
+                if (effect.damage) {
+                  let effectEmoji = '❓';
+                  let effectName = effectType;
+                  
+                  switch (effectType) {
+                    case 'bleed':
+                      effectEmoji = '🩸';
+                      effectName = 'Bleeding';
+                      break;
+                    case 'poison':
+                      effectEmoji = '☠️';
+                      effectName = 'Poison';
+                      break;
+                    case 'burn':
+                      effectEmoji = '🔥';
+                      effectName = 'Burning';
+                      break;
+                    case 'freeze':
+                      effectEmoji = '❄️';
+                      effectName = 'Frozen';
+                      break;
+                    case 'stun':
+                      effectEmoji = '💫';
+                      effectName = 'Stunned';
+                      break;
+                  }
+                  
+                  roundText += `${effectEmoji} **${effectName}**: ${effect.damage} damage (${effect.duration} rounds left)\n`;
+                }
+              }
+            }
+            
+            playerActionLogged = true;
+          } else if (log.playerMissed) {
+            roundText += `👤 **Special attack missed!** 💨\n`;
+            playerActionLogged = true;
+          } else if (log.playerSkill) {
+            const skillEmoji = log.skillType === 'ACTIVE' ? '💥' : log.skillType === 'ULTIMATE' ? '🌟' : '⚔️';
+            
+            // Check if this is a healing skill
+            if (log.playerHealing && log.playerHealing > 0) {
+              roundText += `👤 **${log.skillName}!** 💚 +${log.playerHealing} HP restored\n`;
+            } else if (log.playerStatusEffect) {
+              // Status effect skill
+              if (log.statusEffectType === 'defenseBoost') {
+                roundText += `👤 **${log.skillName}!** 🛡️ +${log.statusEffectValue}% Defense for ${log.statusEffectDuration} turns\n`;
+              } else if (log.statusEffectType === 'burn') {
+                roundText += `👤 **${log.skillName}!** 🔥 Applied burn for ${log.statusEffectDuration} turns\n`;
+              } else if (log.statusEffectType === 'poison') {
+                roundText += `👤 **${log.skillName}!** ☠️ Applied poison for ${log.statusEffectDuration} turns\n`;
+              } else if (log.statusEffectType === 'bleed') {
+                roundText += `👤 **${log.skillName}!** 💉 Applied bleed for ${log.statusEffectDuration} turns\n`;
+              } else if (log.statusEffectType === 'freeze') {
+                roundText += `👤 **${log.skillName}!** ❄️ Frozen enemy for ${log.statusEffectDuration} turn\n`;
+              } else if (log.statusEffectType === 'stun') {
+                roundText += `👤 **${log.skillName}!** ⚡ Stunned enemy for ${log.statusEffectDuration} turn\n`;
+              } else if (log.statusEffectType === 'slow') {
+                roundText += `👤 **${log.skillName}!** 🐌 Slowed enemy by ${log.statusEffectValue}% for ${log.statusEffectDuration} turns\n`;
+              } else {
+                roundText += `👤 **${log.skillName}!** ⚡ Status effect applied\n`;
+              }
+            } else {
+              // Damage skill
+              roundText += `👤 **${log.skillName}!** ${skillEmoji} ${log.playerDamage} damage\n`;
+            }
+            
+            // Add skill effect details for damage skills
+            if (log.skillEffect && log.playerHealing === 0 && !log.playerStatusEffect) {
+              roundText += `└ **Skill Effect**: ${log.skillEffect}x damage multiplier\n`;
+            }
+            
+            playerActionLogged = true;
+          } else if (log.playerSkillBlocked) {
+            roundText += `👤 **${log.skillName} on cooldown!** ⏰\n`;
+            playerActionLogged = true;
+          } else if (log.playerSkillNoEnergy) {
+            roundText += `👤 **${log.skillName} - No energy!** ⚡\n`;
+            playerActionLogged = true;
+          }
+        }
+        
+        // Beast actions (only log once per round)
+        if (!beastActionLogged) {
+          if (log.beastDodged) {
+            roundText += `🦴 **${beast.name} attacks!** 🦴\n👤 You **DODGED!** 💨\n`;
+            beastActionLogged = true;
+          } else if (log.beastDamage) {
+            const damageEmoji = log.beastCritical ? '💥' : log.beastDamage >= 5 ? '⚔️' : '🦴';
+            const criticalHit = log.beastCritical ? ' **CRITICAL!**' : '';
+            const defended = log.playerDefended ? ' (Defended)' : '';
+            roundText += `🦴 **${beast.name} attacks!** ${damageEmoji} ${log.beastDamage} damage${criticalHit}${defended}\n`;
+            // Add passive skill effects for beast attacks
+            if (log.passiveEffects && log.passiveEffects.length > 0) {
+              log.passiveEffects.forEach(effect => {
+                roundText += `🛡️ **${effect}**\n`;
+              });
+            }
+            
+            // Add weapon defense effects
+            if (log.weaponDefenseEffects && log.weaponDefenseEffects.length > 0) {
+              log.weaponDefenseEffects.forEach(effect => {
+                roundText += `${effect}\n`;
+              });
+            }
+            beastActionLogged = true;
+          }
+        }
+      });
       
-      // Beast action summary
-      if (log.beastDodged) {
-        roundText += `🦴 **${beast.name} attacks!** 🦴\n👤 You **DODGED!** 💨\n`;
-      } else if (log.beastDamage) {
-        const damageEmoji = log.beastCritical ? '💥' : '🦴';
-        const criticalHit = log.beastCritical ? ' **CRITICAL!**' : '';
-        roundText += `🦴 **${beast.name} attacks!** ${damageEmoji} ${log.beastDamage} damage${criticalHit}\n`;
-      }
-      
-      if (roundText) {
-        embed.addFields({
-          name: `⚔️ Round ${battleState.currentRound - 1} Results`,
-          value: roundText,
-          inline: false
-        });
-      }
+      embed.addFields({
+        name: `⚔️ Round ${battleState.currentRound - 1} Results`,
+        value: roundText,
+        inline: false
+      });
     }
   }
 
-  // Create action buttons with cooldowns and energy costs (optimized)
+  // Create action buttons with cooldowns and energy costs
   const actions = await BattleSystem.getPlayerActions(user.id);
   
   // Create skill action buttons (4 slots) - FIRST ROW
   const skillActionButtons = new ActionRowBuilder();
   const skillActions = actions.filter(action => action.id.startsWith('skill_'));
   
-  // Optimized skill slot creation
+  // Create 4 skill slots
   for (let slot = 1; slot <= 4; slot++) {
     const skillAction = skillActions.find(action => action.slot === slot);
     
     if (skillAction) {
-      const skillId = skillAction.skillId;
-      const skillCooldown = battleState.skillCooldowns?.[skillId] || 0;
-      
       let buttonLabel = skillAction.name;
       let buttonStyle = ButtonStyle.Success;
       let disabled = false;
       
-      // Quick cooldown and energy checks
+      const skillId = skillAction.skillId;
+      const skillCooldown = battleState.skillCooldowns?.[skillId] || 0;
+      
       if (skillCooldown > 0) {
         buttonLabel = `${skillAction.name} (${skillCooldown})`;
         buttonStyle = ButtonStyle.Secondary;
@@ -5033,17 +5164,18 @@ async function showBattleInterface(interaction, battleState, beast, user) {
   const basicActionButtons = new ActionRowBuilder();
   const basicActions = actions.filter(action => !action.id.startsWith('skill_'));
   
-  // Optimized basic action button creation
+  // Add attack and defend
   basicActions.forEach(action => {
     let buttonLabel = action.name;
     let buttonStyle = ButtonStyle.Primary;
     let disabled = false;
     
-    // Quick cooldown check for defend
-    if (action.id === 'defend' && battleState.actionCooldowns.defend > 0) {
-      buttonLabel = `🛡️ Defend (${battleState.actionCooldowns.defend} rounds)`;
-      buttonStyle = ButtonStyle.Secondary;
-      disabled = true;
+    if (action.id === 'defend') {
+      if (battleState.actionCooldowns.defend > 0) {
+        buttonLabel = `🛡️ Defend (${battleState.actionCooldowns.defend} rounds)`;
+        buttonStyle = ButtonStyle.Secondary;
+        disabled = true;
+      }
     }
     
     basicActionButtons.addComponents(
@@ -5055,13 +5187,20 @@ async function showBattleInterface(interaction, battleState, beast, user) {
     );
   });
 
-  // Add ultimate button to the same row (optimized)
+  // Add ultimate button to the same row
   const ultimateSkill = skillActions.find(action => action.type === 'ULTIMATE');
   if (ultimateSkill) {
-    const isReady = battleState.ultimateReady;
-    const ultimateLabel = isReady ? `${ultimateSkill.name} (READY!)` : `🌟 Ultimate (${battleState.ultimateProgress}%)`;
-    const ultimateStyle = isReady ? ButtonStyle.Danger : ButtonStyle.Secondary;
-    const ultimateDisabled = !isReady;
+    let ultimateLabel = ultimateSkill.name;
+    let ultimateStyle = ButtonStyle.Danger;
+    let ultimateDisabled = false;
+    
+    if (!battleState.ultimateReady) {
+      ultimateLabel = `🌟 Ultimate (${battleState.ultimateProgress}%)`;
+      ultimateStyle = ButtonStyle.Secondary;
+      ultimateDisabled = true;
+    } else {
+      ultimateLabel = `${ultimateSkill.name} (READY!)`;
+    }
     
     basicActionButtons.addComponents(
       new ButtonBuilder()
@@ -5089,12 +5228,10 @@ async function showBattleInterface(interaction, battleState, beast, user) {
       .setStyle(ButtonStyle.Secondary)
   );
 
-  console.log('[DEBUG] About to send battle interface reply');
   await interaction.editReply({
     embeds: [embed],
     components: [skillActionButtons, basicActionButtons]
   });
-  console.log('[DEBUG] Battle interface reply sent successfully');
   // This function will be replaced by the new turn-based system
   // The old battle result code has been removed
 }
@@ -5102,82 +5239,54 @@ async function showBattleInterface(interaction, battleState, beast, user) {
 // Handle battle action (attack, defend, special)
 async function handleBattleAction(interaction, action) {
   try {
-    console.log('[DEBUG] handleBattleAction started for action:', action);
-    const discordId = interaction.user.id;
-    console.log('[DEBUG] Discord ID:', discordId);
-    console.log('[DEBUG] global.activeBattles exists:', !!global.activeBattles);
-    console.log('[DEBUG] global.activeBattles size:', global.activeBattles ? global.activeBattles.size : 'N/A');
-    console.log('[DEBUG] Has battle for user:', global.activeBattles ? global.activeBattles.has(discordId) : false);
-    
-    // Get the active battle
-    if (!global.activeBattles || !global.activeBattles.has(discordId)) {
-      console.log('[DEBUG] No active battle found for user:', discordId);
-      console.log('[DEBUG] Available battles:', global.activeBattles ? Array.from(global.activeBattles.keys()) : 'none');
-      await interaction.editReply({
-        content: '❌ No active battle found.',
-        ephemeral: true
-      });
+    // Safely defer the update to prevent interaction timeout
+    const { safeDeferUpdate } = require('./interaction-utils');
+    const deferred = await safeDeferUpdate(interaction);
+    if (!deferred) {
+      console.error('Failed to defer update for battle action - interaction may have timed out');
       return;
     }
+    
+    const discordId = interaction.user.id;
+  
+  // Get the active battle
+  if (!global.activeBattles || !global.activeBattles.has(discordId)) {
+    await interaction.editReply({
+      content: '❌ No active battle found.',
+      ephemeral: true
+    });
+    return;
+  }
   
   const { battleState, beast, user } = global.activeBattles.get(discordId);
-  console.log('[DEBUG] Retrieved battle data - beast:', beast?.name, 'rarity:', beast?.rarity, 'ID:', beast?.id, 'round:', battleState?.currentRound);
   const BattleSystem = require('./battle-system');
   
-  try {
-    // Execute the player's action with optimized processing
-    const updatedBattleState = await BattleSystem.executePlayerAction(battleState, action);
-    
-    // Update the stored battle state
-    global.activeBattles.set(discordId, { battleState: updatedBattleState, beast, user });
-    console.log('[DEBUG] Updated battle state, new round:', updatedBattleState.currentRound);
-    console.log('[DEBUG] global.activeBattles size after update:', global.activeBattles.size);
-    
-    // Check if battle is complete
-    console.log('[DEBUG] Battle state isComplete:', updatedBattleState.isComplete);
-    console.log('[DEBUG] Player HP:', updatedBattleState.playerHp, '/', updatedBattleState.playerMaxHp);
-    console.log('[DEBUG] Beast HP:', updatedBattleState.beastHp, '/', updatedBattleState.beastMaxHp);
-    
-    if (updatedBattleState.isComplete) {
-      console.log('[DEBUG] Battle is complete, calling handleBattleComplete');
-      await handleBattleComplete(interaction, updatedBattleState, beast, user);
-    } else {
-      // Show the next round interface with optimized rendering
-      console.log('[DEBUG] Battle continuing, calling showBattleInterface');
-      await showBattleInterface(interaction, updatedBattleState, beast, user);
-    }
-  } catch (error) {
-    console.error('Error in handleBattleAction:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred during battle. Please try again.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+  // Execute the player's action
+  const updatedBattleState = await BattleSystem.executePlayerAction(battleState, action);
+  
+  // Update the stored battle state
+  global.activeBattles.set(discordId, { battleState: updatedBattleState, beast, user });
+  
+  // Check if battle is complete
+  if (updatedBattleState.isComplete) {
+    await handleBattleComplete(interaction, updatedBattleState, beast, user);
+  } else {
+    // Show the next round interface
+    await showBattleInterface(interaction, updatedBattleState, beast, user);
   }
+  
   } catch (error) {
     console.error('Error in handleBattleAction:', error);
     try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred during battle. Please try again.',
-          ephemeral: true
-        });
-      }
+      await interaction.editReply('❌ An error occurred during battle.');
     } catch (replyError) {
-      console.error('Error sending error response:', replyError);
+      console.error('Error sending battle error response:', replyError);
     }
   }
 }
 
 // Handle battle completion
 async function handleBattleComplete(interaction, battleState, beast, user) {
-  console.log('[DEBUG] handleBattleComplete called - this should only happen when battle is truly complete');
-  console.log('[DEBUG] Battle result - Player won:', battleState.playerWon, 'Beast won:', battleState.beastWon);
   const BattleSystem = require('./battle-system');
   
   // Calculate base coins for reward calculation
@@ -5407,9 +5516,7 @@ async function handleBattleComplete(interaction, battleState, beast, user) {
     );
 
   // Clean up the active battle
-  console.log('[DEBUG] Cleaning up battle from global.activeBattles for user:', interaction.user.id);
   global.activeBattles.delete(interaction.user.id);
-  console.log('[DEBUG] Battle cleanup completed');
 
   await interaction.editReply({
     embeds: [embed],
@@ -5420,6 +5527,14 @@ async function handleBattleComplete(interaction, battleState, beast, user) {
 // Handle battle flee (from encounter)
 async function handleBattleFlee(interaction) {
   try {
+    // Safely defer the update to prevent interaction timeout
+    const { safeDeferUpdate } = require('./interaction-utils');
+    const deferred = await safeDeferUpdate(interaction);
+    if (!deferred) {
+      console.error('Failed to defer update for battle flee - interaction may have timed out');
+      return;
+    }
+    
     const embed = new EmbedBuilder()
     .setColor('#FFA500')
     .setTitle('🏃‍♂️ You Fled!')
@@ -5438,17 +5553,13 @@ async function handleBattleFlee(interaction) {
     embeds: [embed],
     components: [buttons]
   });
+  
   } catch (error) {
     console.error('Error in handleBattleFlee:', error);
     try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while fleeing from the encounter.',
-          ephemeral: true
-        });
-      }
+      await interaction.editReply('❌ An error occurred while fleeing.');
     } catch (replyError) {
-      console.error('Error sending error response:', replyError);
+      console.error('Error sending battle flee error response:', replyError);
     }
   }
 }
@@ -5456,16 +5567,24 @@ async function handleBattleFlee(interaction) {
 // Handle battle flee (during active battle)
 async function handleBattleFleeDuringBattle(interaction) {
   try {
-    const discordId = interaction.user.id;
-    
-    // Get the active battle
-    if (!global.activeBattles || !global.activeBattles.has(discordId)) {
-      await interaction.editReply({
-        content: '❌ No active battle found.',
-        ephemeral: true
-      });
+    // Safely defer the update to prevent interaction timeout
+    const { safeDeferUpdate } = require('./interaction-utils');
+    const deferred = await safeDeferUpdate(interaction);
+    if (!deferred) {
+      console.error('Failed to defer update for battle flee during battle - interaction may have timed out');
       return;
     }
+    
+    const discordId = interaction.user.id;
+  
+  // Get the active battle
+  if (!global.activeBattles || !global.activeBattles.has(discordId)) {
+    await interaction.editReply({
+      content: '❌ No active battle found.',
+      ephemeral: true
+    });
+    return;
+  }
   
   const { battleState, beast, user } = global.activeBattles.get(discordId);
   
@@ -5511,17 +5630,13 @@ async function handleBattleFleeDuringBattle(interaction) {
     embeds: [embed],
     components: [buttons]
   });
+  
   } catch (error) {
     console.error('Error in handleBattleFleeDuringBattle:', error);
     try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while fleeing from battle.',
-          ephemeral: true
-        });
-      }
+      await interaction.editReply('❌ An error occurred while fleeing from battle.');
     } catch (replyError) {
-      console.error('Error sending error response:', replyError);
+      console.error('Error sending battle flee during battle error response:', replyError);
     }
   }
 }
@@ -5529,15 +5644,13 @@ async function handleBattleFleeDuringBattle(interaction) {
 // Crafting button handlers
 async function handleCraftingStations(interaction) {
   try {
-    await safeDeferUpdate(interaction);
-    
     const userId = interaction.user.id;
     const user = await prisma.user.findUnique({
       where: { discordId: userId }
     });
 
     if (!user) {
-      return interaction.editReply({
+      return interaction.update({
         content: '❌ User not found.',
         ephemeral: true
       });
@@ -5546,20 +5659,10 @@ async function handleCraftingStations(interaction) {
     const CraftingSystem = require('./crafting-system');
     const stations = await CraftingSystem.getAvailableStations(user.id);
     
-    // Debug: Log user info and station data
-    console.log(`User level: ${user.level}, coins: ${user.coins}`);
-    console.log('Stations data:', stations.map(s => ({
-      name: s.name,
-      unlocked: s.unlocked,
-      canUnlock: s.canUnlock,
-      requiredLevel: s.requiredLevel,
-      unlockCost: s.unlockCost
-    })));
-    
     const embed = new EmbedBuilder()
       .setColor('#FF6B35')
       .setTitle('🏭 Crafting Stations')
-      .setDescription(`Unlock new crafting stations to access more recipes!\n\n**Your Level:** ${user.level} | **Your Coins:** ${user.coins.toLocaleString()}`);
+      .setDescription('Unlock new crafting stations to access more recipes!');
 
     for (const station of stations) {
       let status = '🔒 Locked';
@@ -5619,19 +5722,13 @@ async function handleCraftingStations(interaction) {
       buttonRows.push(backButton);
     }
 
-    await interaction.editReply({ embeds: [embed], components: buttonRows });
+    await interaction.update({ embeds: [embed], components: buttonRows });
   } catch (error) {
     console.error('Error handling crafting stations:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while loading crafting stations.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+    await interaction.update({
+      content: '❌ An error occurred while loading crafting stations.',
+      ephemeral: true
+    });
   }
 }
 
@@ -5750,6 +5847,9 @@ async function handleCraftingButton(interaction, customId) {
 
 async function handleUnlockStation(interaction, customId) {
   try {
+    // Defer the update to prevent interaction timeout
+    await interaction.deferUpdate();
+    
     const stationId = customId.replace('unlock_station_', '');
     const userId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -5798,15 +5898,24 @@ async function handleUnlockStation(interaction, customId) {
     } else {
       await interaction.reply({
         content: `❌ ${result.message}`,
-        ephemeral: true
+        flags: 64
       });
     }
   } catch (error) {
     console.error('Error handling unlock station:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while unlocking the station.',
-      ephemeral: true
-    });
+    
+    // Handle specific database constraint errors
+    if (error.code === 'P2002') {
+      await interaction.reply({
+        content: '❌ This station is already unlocked.',
+        flags: 64
+      });
+    } else {
+      await interaction.reply({
+        content: '❌ An error occurred while unlocking the station.',
+        flags: 64
+      });
+    }
   }
 }
 
@@ -5942,10 +6051,10 @@ async function handleCraftingMenu(interaction) {
 
     buttonRows.push(backButton);
 
-    return interaction.editReply({ embeds: [embed], components: buttonRows });
+    return interaction.update({ embeds: [embed], components: buttonRows });
   } catch (error) {
     console.error('Error in crafting menu:', error);
-    await interaction.editReply({
+    await interaction.update({
       content: '❌ An error occurred while loading the crafting menu.',
       ephemeral: true
     });
@@ -5954,15 +6063,13 @@ async function handleCraftingMenu(interaction) {
 
 async function handleInventoryCraft(interaction) {
   try {
-    await safeDeferUpdate(interaction);
-    
     const userId = interaction.user.id;
     const user = await prisma.user.findUnique({
       where: { discordId: userId }
     });
 
     if (!user) {
-      return interaction.editReply({
+      return interaction.reply({
         content: '❌ User not found.',
         ephemeral: true
       });
@@ -5990,7 +6097,7 @@ async function handleInventoryCraft(interaction) {
             .setStyle(ButtonStyle.Secondary)
         );
 
-      return interaction.editReply({ embeds: [embed], components: [buttons] });
+      return interaction.update({ embeds: [embed], components: [buttons] });
     }
 
     // Group recipes by station
@@ -6045,19 +6152,13 @@ async function handleInventoryCraft(interaction) {
           .setStyle(ButtonStyle.Secondary)
       );
 
-    await interaction.editReply({ embeds: [embed], components: [buttons] });
+    await interaction.update({ embeds: [embed], components: [buttons] });
   } catch (error) {
     console.error('Error in inventory crafting:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while loading the crafting menu.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+    await interaction.followUp({
+      content: '❌ An error occurred while loading the crafting menu.',
+      ephemeral: true
+    });
   }
 }
 
@@ -6310,7 +6411,7 @@ async function handleChangeClass(interaction) {
 // Class menu handler
 async function handleClassMenu(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const userId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -6438,7 +6539,7 @@ async function handleClassMenu(interaction) {
 // Tutorial system handlers
 async function handleTutorialStart(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     // Validate that this user owns the tutorial
     const user = await prisma.user.findUnique({
@@ -6455,22 +6556,16 @@ async function handleTutorialStart(interaction) {
     await interaction.editReply({ embeds: [embed], components: components });
   } catch (error) {
     console.error('Error starting tutorial:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while starting the tutorial.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+    await interaction.reply({
+      content: '❌ An error occurred while starting the tutorial.',
+      ephemeral: true
+    });
   }
 }
 
 async function handleTutorialSkip(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const discordId = interaction.user.id;
     const TutorialSystem = require('./tutorial-system');
@@ -6503,22 +6598,16 @@ async function handleTutorialSkip(interaction) {
     }
   } catch (error) {
     console.error('Error skipping tutorial:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while skipping the tutorial.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+    await interaction.reply({
+      content: '❌ An error occurred while skipping the tutorial.',
+      ephemeral: true
+    });
   }
 }
 
 async function handleTutorialStep2(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const TutorialSystem = require('./tutorial-system');
     const { embed, components } = await TutorialSystem.showTutorialStep2(interaction);
@@ -6526,22 +6615,16 @@ async function handleTutorialStep2(interaction) {
     await interaction.editReply({ embeds: [embed], components: components });
   } catch (error) {
     console.error('Error showing tutorial step 2:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while loading tutorial step 2.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+    await interaction.reply({
+      content: '❌ An error occurred while loading tutorial step 2.',
+      ephemeral: true
+    });
   }
 }
 
 async function handleTutorialClassSelection(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     // Validate that this user owns the tutorial
     const user = await prisma.user.findUnique({
@@ -6579,6 +6662,8 @@ async function handleTutorialClassSelection(interaction) {
 
 async function handleTutorialBranchSelection(interaction) {
   try {
+    await interaction.deferUpdate();
+    
     // Validate that this user owns the tutorial
     const user = await prisma.user.findUnique({
       where: { discordId: interaction.user.id }
@@ -6617,6 +6702,8 @@ async function handleTutorialBranchSelection(interaction) {
 
 async function handleTutorialComplete(interaction) {
   try {
+    await interaction.deferUpdate();
+    
     const discordId = interaction.user.id;
     const TutorialSystem = require('./tutorial-system');
     
@@ -6662,6 +6749,8 @@ async function handleTutorialComplete(interaction) {
 
 async function handleTutorialRestart(interaction) {
   try {
+    await interaction.deferUpdate();
+    
     const discordId = interaction.user.id;
     
     // Reset user's tutorial progress
@@ -6692,6 +6781,8 @@ async function handleTutorialRestart(interaction) {
 
 async function handleTutorialBackToClasses(interaction) {
   try {
+    await interaction.deferUpdate();
+    
     // Validate that this user owns the tutorial
     const user = await prisma.user.findUnique({
       where: { discordId: interaction.user.id }
@@ -6726,6 +6817,8 @@ async function handleTutorialBackToClasses(interaction) {
 
 async function handleTutorialExplore(interaction) {
   try {
+    await interaction.deferUpdate();
+    
     // Validate that this user owns the tutorial
     const user = await prisma.user.findUnique({
       where: { discordId: interaction.user.id }
@@ -6748,6 +6841,8 @@ async function handleTutorialExplore(interaction) {
 
 async function handleTutorialHub(interaction) {
   try {
+    await interaction.deferUpdate();
+    
     // Validate that this user owns the tutorial
     const user = await prisma.user.findUnique({
       where: { discordId: interaction.user.id }
@@ -6770,7 +6865,7 @@ async function handleTutorialHub(interaction) {
 
 async function handleViewBranch(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const userId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -6965,22 +7060,16 @@ async function handleViewBranch(interaction) {
 
   } catch (error) {
     console.error('Error viewing branch:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while viewing the branch.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+    await interaction.reply({
+      content: '❌ An error occurred while viewing the branch.',
+      ephemeral: true
+    });
   }
 }
 
 async function handleLearnSkill(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const userId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -7159,22 +7248,16 @@ async function handleLearnSkill(interaction) {
 
   } catch (error) {
     console.error('Error learning skill:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while learning the skill.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+    await interaction.reply({
+      content: '❌ An error occurred while learning the skill.',
+      ephemeral: true
+    });
   }
 }
 
 async function handleConfirmClassChange(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const userId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -7249,7 +7332,7 @@ async function handleConfirmClassChange(interaction) {
 
 async function handleCancelClassChange(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const userId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -7271,7 +7354,7 @@ async function handleCancelClassChange(interaction) {
 
 async function handleUpgradeSkill(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const userId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -7829,15 +7912,15 @@ async function handleCraftClassSelection(interaction, customId) {
     await interaction.update({ embeds: [embed], components: [buttonRow, backButton] });
   } catch (error) {
     console.error('Error handling craft class selection:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while loading class selection.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
 async function handleCraftTypeSelection(interaction, customId) {
   try {
+    // Defer the update to prevent interaction timeout
+    await interaction.deferUpdate();
+    
     const parts = customId.replace('craft_type_', '').split('_');
     const stationId = parts[0];
     const playerClass = parts[1];
@@ -7881,15 +7964,15 @@ async function handleCraftTypeSelection(interaction, customId) {
     await showCraftItemsPage(interaction, recipes, stationId, playerClass, equipmentType, 0);
   } catch (error) {
     console.error('Error handling craft type selection:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while loading equipment type.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
 async function handleCraftItemSelection(interaction, customId) {
   try {
+    // Defer the update to prevent interaction timeout
+    await interaction.deferUpdate();
+    
     const parts = customId.replace('craft_item_', '').split('_');
     const stationId = parts[0];
     const playerClass = parts[1];
@@ -8011,10 +8094,9 @@ async function handleCraftItemSelection(interaction, customId) {
     await interaction.update({ embeds: [embed], components: allButtons });
   } catch (error) {
     console.error('Error handling craft item selection:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while loading item details.',
-      ephemeral: true
-    });
+    console.error('Custom ID:', customId);
+    console.error('User ID:', interaction.user.id);
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -8151,7 +8233,7 @@ async function showCraftItemsPage(interaction, recipes, stationId, playerClass, 
         .setLabel(recipe.resultEquipment.name.length > 20 ? recipe.resultEquipment.name.substring(0, 17) + '...' : recipe.resultEquipment.name)
         .setStyle(buttonStyle)
         .setEmoji(emoji)
-        .setDisabled(isCrafted) // Disable button if already crafted
+        .setDisabled(false) // Always allow clicking to view details
     );
   }
 
@@ -8201,6 +8283,9 @@ async function showCraftItemsPage(interaction, recipes, stationId, playerClass, 
 
 async function handleCraftPageNavigation(interaction, customId) {
   try {
+    // Defer the update to prevent interaction timeout
+    await interaction.deferUpdate();
+    
     const parts = customId.replace('craft_page_', '').split('_');
     const stationId = parts[0];
     const playerClass = parts[1];
@@ -8245,15 +8330,15 @@ async function handleCraftPageNavigation(interaction, customId) {
     await showCraftItemsPage(interaction, recipes, stationId, playerClass, equipmentType, page);
   } catch (error) {
     console.error('Error handling craft page navigation:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while navigating pages.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
 async function handleCraftCreate(interaction, customId) {
   try {
+    // Defer the update to prevent interaction timeout
+    await interaction.deferUpdate();
+    
     const parts = customId.replace('craft_create_', '').split('_');
     const recipeId = parts[0];
     const stationId = parts[1];
@@ -8376,10 +8461,9 @@ async function handleCraftCreate(interaction, customId) {
     }
   } catch (error) {
     console.error('Error handling craft create:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while crafting the item.',
-      ephemeral: true
-    });
+    console.error('Custom ID:', customId);
+    console.error('User ID:', interaction.user.id);
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -8471,10 +8555,7 @@ async function handleEquipEquipment(interaction, customId) {
     await interaction.update({ embeds: [embed] });
   } catch (error) {
     console.error('Error equipping equipment:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while equipping the equipment.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -8497,17 +8578,12 @@ async function handleCraftBackToItems(interaction, customId) {
     await showCraftItemsPage(interaction, recipes, stationId, playerClass, equipmentType, parseInt(page) || 0);
   } catch (error) {
     console.error('Error going back to items:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while returning to items.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
 async function handleInventoryRelics(interaction) {
   try {
-    await safeDeferUpdate(interaction);
-    
     const userId = interaction.user.id;
     
     const user = await prisma.user.findUnique({
@@ -8515,7 +8591,7 @@ async function handleInventoryRelics(interaction) {
     });
 
     if (!user) {
-      return interaction.editReply({
+      return interaction.reply({
         content: '❌ User not found.',
         ephemeral: true
       });
@@ -8629,19 +8705,10 @@ async function handleInventoryRelics(interaction) {
       );
     buttonRows.push(backButton);
 
-    await interaction.editReply({ embeds: [embed], components: buttonRows });
+    await interaction.update({ embeds: [embed], components: buttonRows });
   } catch (error) {
     console.error('Error handling inventory relics:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while loading relic materials.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -8654,7 +8721,7 @@ async function handleInventoryBeasts(interaction) {
     });
 
     if (!user) {
-      return interaction.editReply({
+      return interaction.reply({
         content: '❌ User not found.',
         ephemeral: true
       });
@@ -8691,7 +8758,7 @@ async function handleInventoryBeasts(interaction) {
             .setEmoji('🔙')
         );
 
-      await interaction.editReply({ embeds: [embed], components: [backButton] });
+      await interaction.update({ embeds: [embed], components: [backButton] });
       return;
     }
 
@@ -8768,19 +8835,10 @@ async function handleInventoryBeasts(interaction) {
       );
     buttonRows.push(backButton);
 
-    await interaction.editReply({ embeds: [embed], components: buttonRows });
+    await interaction.update({ embeds: [embed], components: buttonRows });
   } catch (error) {
     console.error('Error handling inventory beasts:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while loading beast materials.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -8793,7 +8851,7 @@ async function handleInventoryEquipment(interaction) {
     });
 
     if (!user) {
-      return interaction.editReply({
+      return interaction.reply({
         content: '❌ User not found.',
         ephemeral: true
       });
@@ -8832,7 +8890,7 @@ async function handleInventoryEquipment(interaction) {
             .setEmoji('🔙')
         );
 
-      await interaction.editReply({ embeds: [embed], components: [backButton] });
+      await interaction.update({ embeds: [embed], components: [backButton] });
       return;
     }
 
@@ -8908,26 +8966,15 @@ async function handleInventoryEquipment(interaction) {
       );
     buttonRows.push(backButton);
 
-    await interaction.editReply({ embeds: [embed], components: buttonRows });
+    await interaction.update({ embeds: [embed], components: buttonRows });
   } catch (error) {
     console.error('Error handling inventory equipment:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while loading equipment.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+    await handleButtonError(interaction, error);
   }
 }
 
 async function handleRelicsRarity(interaction, customId) {
   try {
-    await safeDeferUpdate(interaction);
-    
     const rarity = customId.replace('relics_rarity_', '');
     
     const userId = interaction.user.id;
@@ -8937,7 +8984,7 @@ async function handleRelicsRarity(interaction, customId) {
     });
 
     if (!user) {
-      return interaction.editReply({
+      return interaction.reply({
         content: '❌ User not found.',
         ephemeral: true
       });
@@ -9082,19 +9129,10 @@ async function handleRelicsRarity(interaction, customId) {
       );
     buttonRows.push(backButton);
 
-    await interaction.editReply({ embeds: [embed], components: buttonRows });
+    await interaction.update({ embeds: [embed], components: buttonRows });
   } catch (error) {
     console.error('Error handling relics rarity:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while loading relic materials.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -9257,10 +9295,7 @@ async function handleBeastsRarity(interaction, customId) {
     await interaction.update({ embeds: [embed], components: buttonRows });
   } catch (error) {
     console.error('Error handling beasts rarity:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while loading beast materials.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -9382,10 +9417,7 @@ async function handleSellRelics(interaction, customId) {
     await interaction.update({ embeds: [embed], components: [backButton] });
   } catch (error) {
     console.error('Error selling relics:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while selling relics.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -9507,10 +9539,7 @@ async function handleSellBeasts(interaction, customId) {
     await interaction.update({ embeds: [embed], components: [backButton] });
   } catch (error) {
     console.error('Error selling beasts:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while selling beast materials.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -9685,10 +9714,7 @@ async function handleResearchRelics(interaction) {
     await interaction.update({ embeds: [embed], components: buttonRows });
   } catch (error) {
     console.error('Error handling research relics:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while loading relic upgrades.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -9861,10 +9887,7 @@ async function handleResearchBeasts(interaction) {
     await interaction.update({ embeds: [embed], components: buttonRows });
   } catch (error) {
     console.error('Error handling research beasts:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while loading beast upgrades.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -10186,10 +10209,7 @@ async function updateResearchEmbed(interaction, type) {
     }
   } catch (error) {
     console.error('Error updating research embed:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while updating the research table.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -10451,17 +10471,11 @@ async function handleResearchCombine(interaction, customId) {
       await updateResearchEmbed(interaction, type);
     } catch (error) {
       console.error('Error during research combination:', error);
-      await interaction.reply({
-        content: '❌ An error occurred during the combination process.',
-        ephemeral: true
-      });
+      await handleButtonError(interaction, error);
     }
   } catch (error) {
     console.error('Error handling research combine:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while processing the combination.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
@@ -10512,16 +10526,13 @@ async function handleResearchTable(interaction, station) {
     await interaction.update({ embeds: [embed], components: [buttonRow, backButton] });
   } catch (error) {
     console.error('Error handling research table:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while loading the research table.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
 async function handleViewSkillsByCategory(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const userId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -10785,22 +10796,13 @@ async function handleViewSkillsByCategory(interaction) {
 
   } catch (error) {
     console.error('Error viewing skills by category:', error);
-    try {
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: '❌ An error occurred while viewing skills.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      console.error('Error sending error response:', replyError);
-    }
+    await handleButtonError(interaction, error);
   }
 }
 
 async function handleRespecCategory(interaction) {
   try {
-    await safeDeferUpdate(interaction);
+    await interaction.deferUpdate();
     
     const userId = interaction.user.id;
     const user = await prisma.user.findUnique({
@@ -10930,17 +10932,14 @@ async function handleRespecCategory(interaction) {
 
   } catch (error) {
     console.error('Error respeccing category:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while respeccing skills.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
-
-
 async function handleEquippedSkills(interaction) {
   try {
+    await interaction.deferUpdate();
+    
     const userId = interaction.user.id;
     const user = await prisma.user.findUnique({
       where: { discordId: userId }
@@ -11179,15 +11178,14 @@ async function handleEquippedSkills(interaction) {
 
   } catch (error) {
     console.error('Error handling equipped skills:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while loading equipped skills.',
-      ephemeral: true
-    });
+    await handleButtonError(interaction, error);
   }
 }
 
 async function handleEquipSkill(interaction) {
   try {
+    await interaction.deferUpdate();
+    
     const userId = interaction.user.id;
     const skillId = interaction.customId.replace('equip_skill_', '');
     
@@ -11246,8 +11244,12 @@ async function handleEquipSkill(interaction) {
 
       await interaction.editReply({ embeds: [embed] });
       
-      // Send success message - user can refresh manually if needed
-      await interaction.editReply({ embeds: [embed] });
+      // Immediately refresh the equipped skills view
+      try {
+        await handleEquippedSkills(interaction);
+      } catch (error) {
+        console.error('Error refreshing equipped skills interface:', error);
+      }
       return;
     }
 

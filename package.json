@@ -14,15 +14,7 @@
     "db:seed-gear": "node prisma/seed-gear-and-crafting.js",
     "db:seed-complete-gear": "node prisma/seed-complete-gear.js",
     "db:seed-classes": "node prisma/seed-classes-and-skills.js",
-    "db:studio": "prisma studio",
-    "test:user-management": "node test-user-management.js",
-    "check:user-data": "node user-data-integrity-check.js all",
-    "update:skill-effects": "node update-skill-effects.js",
-    "test:damage-calculation": "node test-damage-calculation.js",
-    "test:interaction-handling": "node test-interaction-handling.js",
-    "test:crafting-debug": "node test-crafting-debug.js",
-    "test:crafting-simple": "node test-crafting-simple.js",
-    "test:interaction-fixes": "node test-interaction-fixes.js"
+    "db:studio": "prisma studio"
   },
   "keywords": [
     "discord",

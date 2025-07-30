@@ -3,7 +3,6 @@ const prisma = require('../lib/database');
 const { canExplore, updateLastExplore, getBestBrush, getBestMap } = require('../lib/cooldown');
 const { calculateExplorationXP, awardXP } = require('../lib/xp-system');
 const { getItemEmoji } = require('../lib/emoji-config');
-const { safeDeferReply } = require('../lib/interaction-utils');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -13,20 +12,29 @@ module.exports = {
   cooldown: 0, // We handle cooldown manually now
   
   async execute(interaction) {
+    await interaction.deferReply();
+    
+    const userId = interaction.user.id;
+    const username = interaction.user.username;
+    
     try {
-      // Safely defer the reply
-      const deferred = await safeDeferReply(interaction);
-      if (!deferred) {
-        console.error('Failed to defer reply for explore command');
-        return;
+      // Get or create user
+      let user = await prisma.user.findUnique({
+        where: { discordId: userId }
+      });
+      
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            discordId: userId,
+            username: username,
+            guildId: interaction.guildId || null,
+            level: 1,
+            experience: 0,
+            coins: 0
+          }
+        });
       }
-      
-      const userId = interaction.user.id;
-      const username = interaction.user.username;
-      
-      // Get or create user using the centralized user management system
-      const UserManagement = require('../lib/user-management');
-      const user = await UserManagement.getValidatedUser(userId, username, interaction.guildId || null);
       
       // Get all zones and find the best one for the user's level
       const zones = await prisma.zone.findMany({

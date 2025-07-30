@@ -1,7 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { createMainMenuButtonsWithBosses } = require('../lib/buttons');
 const prisma = require('../lib/database');
-const { safeDeferReply } = require('../lib/interaction-utils');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -10,28 +9,37 @@ module.exports = {
   
   async execute(interaction) {
     try {
-      // Safely defer the reply
-      const deferred = await safeDeferReply(interaction);
-      if (!deferred) {
-        console.error('Failed to defer reply for raid command - interaction may have timed out');
-        // Try to send a simple reply instead
-        try {
-          await interaction.reply({ 
-            content: '❌ Interaction timed out. Please try the command again.', 
-            ephemeral: true 
-          });
-        } catch (replyError) {
-          console.error('Failed to send timeout message:', replyError);
-        }
+      await interaction.deferReply();
+    } catch (error) {
+      if (error.code === 10062) {
+        console.warn(`[Raid Command] Interaction already expired. Skipping.`);
         return;
       }
-      
+      throw error;
+    }
+    
+    try {
       const userId = interaction.user.id;
       const username = interaction.user.username;
       
-      // Get or create user using the centralized user management system
-      const UserManagement = require('../lib/user-management');
-      const user = await UserManagement.getValidatedUser(userId, username, interaction.guildId || null);
+      // Get or create user
+      let user = await prisma.user.findUnique({
+        where: { discordId: userId }
+      });
+      
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            discordId: userId,
+            username: username,
+            guildId: interaction.guildId || null,
+            level: 1,
+            experience: 0,
+            coins: 0,
+            tutorialCompleted: false
+          }
+        });
+      }
 
       // Check if user needs tutorial
       const TutorialSystem = require('../lib/tutorial-system');
@@ -39,7 +47,8 @@ module.exports = {
       
       if (needsTutorial) {
         const { embed, components } = await TutorialSystem.startTutorial(interaction, user);
-        return await interaction.editReply({ embeds: [embed], components: components });
+        await interaction.editReply({ embeds: [embed], components: components });
+        return;
       }
       
       // Calculate XP progress to next level
@@ -101,26 +110,14 @@ module.exports = {
         });
       }
       
-      await interaction.editReply({
-        embeds: [embed],
-        components: [createMainMenuButtonsWithBosses()]
-      });
+        await interaction.editReply({
+    embeds: [embed],
+    components: [createMainMenuButtonsWithBosses()]
+  });
       
     } catch (error) {
       console.error('Error in raid command:', error);
-      
-      // Handle error response properly
-      try {
-        if (interaction.deferred && !interaction.replied) {
-          await interaction.editReply('❌ An error occurred while opening the hub.');
-        } else if (!interaction.replied) {
-          await interaction.reply('❌ An error occurred while opening the hub.');
-        } else {
-          await interaction.followUp('❌ An error occurred while opening the hub.');
-        }
-      } catch (replyError) {
-        console.error('Error sending error response:', replyError);
-      }
+      await interaction.editReply('❌ An error occurred while opening the hub.');
     }
   },
 }; 

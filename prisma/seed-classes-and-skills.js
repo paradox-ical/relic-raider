@@ -118,19 +118,19 @@ async function main() {
 
     // Set specific values based on skill type and description
     if (skillData.type === 'PASSIVE') {
-      baseEffect = 10.0; // 10% bonus
-      effectPerLevel = 2.0; // +2% per level
+      baseEffect = 1.0;
+      effectPerLevel = 0.1;
       energyCost = 0;
       cooldown = 0;
     } else if (skillData.type === 'ACTIVE') {
-      baseEffect = 50.0; // 50% bonus
-      effectPerLevel = 10.0; // +10% per level
+      baseEffect = 1.5;
+      effectPerLevel = 0.2;
       energyCost = 25;
       cooldown = 3;
       requiredLevel = 10;
     } else if (skillData.type === 'ULTIMATE') {
-      baseEffect = 150.0; // 150% bonus
-      effectPerLevel = 25.0; // +25% per level
+      baseEffect = 3.0;
+      effectPerLevel = 0.5;
       energyCost = 100;
       cooldown = 8;
       requiredLevel = 25;

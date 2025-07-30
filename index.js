@@ -1,9 +1,8 @@
-const { Client, Collection, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const { logWithShard } = require('./lib/shard-utils');
 const { handleButtonInteraction } = require('./lib/button-handler');
-const { handleCommandError } = require('./lib/interaction-utils');
 require('dotenv').config();
 
 const client = new Client({
@@ -66,8 +65,12 @@ client.on('interactionCreate', async interaction => {
     try {
       await handleButtonInteraction(interaction);
     } catch (error) {
-      // Button errors are now handled within handleButtonInteraction
-      console.error('Unhandled button interaction error:', error);
+      // Handle unknown interaction errors silently
+      if (error.code === 10062) {
+        console.log('Unknown interaction in main handler, skipping...');
+        return;
+      }
+      console.error('Error handling button interaction:', error);
     }
     return;
   }
@@ -105,7 +108,8 @@ client.on('interactionCreate', async interaction => {
   try {
     await command.execute(interaction);
   } catch (error) {
-    await handleCommandError(interaction, error, command.data.name);
+    logWithShard(client, `Error executing command ${command.data.name}: ${error.message}`, 'error');
+    // Don't try to send error responses to avoid interaction acknowledgment issues
   }
 });
 
