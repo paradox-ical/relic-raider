@@ -1,0 +1,25 @@
+Class,Branch,Skill Name,Type,Description
+Rogue,Shadow Dance,Slipstream,Passive,+15% dodge chance
+Rogue,Shadow Dance,Vanish,Passive,Evade one fatal attack per battle
+Rogue,Shadow Dance,Silent Steps,Passive,Gain 0.5s cooldown reduction on next skill after dodging
+Rogue,Shadow Dance,Shadow Step,Active,Evade next attack and gain +25% crit chance for 1 turn
+Rogue,Shadow Dance,Fade Slash,Active,Guaranteed hit that deals bonus damage if not hit last turn
+Rogue,Shadow Dance,Evasive Roll,Active,Reduce incoming damage by 50% this turn
+Rogue,Shadow Dance,Backlash,Active,"If enemy misses, counter with 50% damage"
+Rogue,Shadow Dance,Cloak of Wraiths,Ultimate,Become untargetable for 1 turn and reset all cooldowns
+Rogue,Venomcraft,Poisoned Blades,Passive,Basic attacks apply poison for 2 turns
+Rogue,Venomcraft,Venomous Insight,Passive,+10% crit damage against poisoned enemies
+Rogue,Venomcraft,Toxic Efficiency,Passive,Poison lasts 1 extra turn
+Rogue,Venomcraft,Toxic Lunge,Active,Strike applies stacking poison and slows enemy
+Rogue,Venomcraft,Caustic Strike,Active,Deals damage scaling with poison stacks
+Rogue,Venomcraft,Fangburst,Active,Explode poison stacks for instant damage
+Rogue,Venomcraft,Vial Throw,Active,Apply poison and reduce enemy defence by 10%
+Rogue,Venomcraft,Death’s Kiss,Ultimate,Deal massive damage + double all poison damage over 3 turns
+Rogue,Dagger Arts,Serrated Edge,Passive,+10% crit chance
+Rogue,Dagger Arts,Relentless,Passive,Gain 5% bonus damage after every successful crit (stacks to 3)
+Rogue,Dagger Arts,Opportunist,Passive,Crits reduce cooldown of next skill by 1s
+Rogue,Dagger Arts,Pierce,Active,Ignore 25% of target's defence
+Rogue,Dagger Arts,Double Slash,Active,Strike twice with reduced accuracy
+Rogue,Dagger Arts,Deadeye Jab,Active,Crits always deal max possible damage
+Rogue,Dagger Arts,Finisher,Active,Bonus damage if enemy is below 30% HP
+Rogue,Dagger Arts,Assassin’s Flurry,Ultimate,Perform 4 rapid hits with high crit chance

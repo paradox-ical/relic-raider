@@ -1,0 +1,728 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for Discord players
+model User {
+  id        String   @id @default(cuid())
+  discordId String   @unique
+  username  String
+  guildId   String?  // Server ID for server-specific features
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Game stats
+  level     Int      @default(1)
+  experience Int     @default(0)
+  coins     Int      @default(0)
+  lastExplore DateTime?
+  currentZone String? @default("Jungle Ruins")
+  totalExplorations Int @default(0) // Track total explorations
+  
+  // Battle stats
+  baseHp    Int      @default(100)
+  baseAttack Int     @default(10)
+  baseDefense Int    @default(5)
+  beastsSlain Int    @default(0)
+  bossesSlain Int    @default(0)
+  
+  // Skill system
+  playerClass String? @default("Adventurer") // Player's chosen class
+  skillPoints Int     @default(0) // Available skill points
+  totalSkillPoints Int @default(0) // Total skill points earned
+  
+  // Tutorial system
+  tutorialCompleted Boolean @default(false) // Whether the tutorial has been completed
+  selectedBranch String? // The skill branch selected during tutorial
+  branchUnlockNotified Boolean @default(false) // Whether user has been notified about branch unlock
+  
+  // Skill respec cooldowns
+  lastPassiveRespecTime DateTime?
+  lastActiveRespecTime DateTime?
+  lastUltimateRespecTime DateTime?
+  
+  // Relationships
+  inventoryItems InventoryItem[]
+  userEquipment UserEquipment[]
+  userCollections UserCollection[]
+  userBrushes UserBrush[]
+  userMaps UserMap[]
+  userAchievements UserAchievement[]
+  userTitles UserTitle[]
+  challengeProgress UserChallengeProgress[]
+  hiddenDiscoveries HiddenAchievementDiscovery[]
+  bossDefeats BossDefeat[]
+  userCraftingProgress UserCraftingProgress[]
+  userCraftingStations UserCraftingStation[]
+  userSkills UserSkill[]
+  equippedSkills EquippedSkill[]
+  equippedGear EquippedGear[]
+  
+  @@map("users")
+}
+
+// Player classes
+model PlayerClass {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  baseHp      Int      @default(100)
+  baseAttack  Int      @default(10)
+  baseDefense Int      @default(5)
+  hpPerLevel  Int      @default(10)
+  attackPerLevel Int   @default(2)
+  defensePerLevel Int  @default(1)
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  classSkills ClassSkill[]
+  
+  @@map("player_classes")
+}
+
+// Skills available to classes
+model Skill {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  type        SkillType
+  category    SkillCategory
+  maxLevel    Int      @default(5)
+  baseEffect  Float    @default(1.0)
+  effectPerLevel Float @default(0.2)
+  energyCost  Int      @default(0)
+  cooldown    Int      @default(0)
+  requiredLevel Int    @default(1)
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  classSkills ClassSkill[]
+  userSkills  UserSkill[]
+  equippedSkills EquippedSkill[]
+  
+  @@map("skills")
+}
+
+// Class-Skill relationships
+model ClassSkill {
+  id          String @id @default(cuid())
+  classId     String
+  skillId     String
+  branch      String @default("General") // Skill tree branch (e.g., "Guardian's Oath", "Crusader's Fury")
+  unlockLevel Int    @default(1) // Level required to unlock this skill
+  isPassive   Boolean @default(false)
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  playerClass PlayerClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  skill       Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  
+  @@unique([classId, skillId])
+  @@map("class_skills")
+}
+
+// User's learned skills
+model UserSkill {
+  id        String @id @default(cuid())
+  userId    String
+  skillId   String
+  level     Int    @default(1)
+  learnedAt DateTime @default(now())
+  
+  // Relationships
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, skillId])
+  @@map("user_skills")
+}
+
+// User's equipped skills for battle
+model EquippedSkill {
+  id        String @id @default(cuid())
+  userId    String
+  skillId   String
+  slot      Int    // Slot number for battle (1-4 for active skills, 1 for ultimate)
+  equippedAt DateTime @default(now())
+  
+  // Relationships
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, slot])
+  @@map("equipped_skills")
+}
+
+// Equipment system
+model Equipment {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  type        EquipmentType
+  rarity      Rarity
+  level       Int      @default(1)
+  hpBonus     Int      @default(0)
+  attackBonus Int      @default(0)
+  defenseBonus Int     @default(0)
+  specialEffect String? // JSON string for special effects
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  equippedGear   EquippedGear[]
+  userEquipment  UserEquipment[]
+  craftingRecipes CraftingRecipe[]
+  
+  @@map("equipment")
+}
+
+// User's equipped gear
+model EquippedGear {
+  id          String @id @default(cuid())
+  userId      String
+  equipmentId String
+  slot        EquipmentSlot
+  equippedAt  DateTime @default(now())
+  
+  // Relationships
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, slot])
+  @@map("equipped_gear")
+}
+
+// Items/Relics that can be found
+model Item {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  rarity      Rarity
+  value       Int
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  inventoryItems InventoryItem[]
+  collectionItems CollectionItem[]
+  zoneItems ZoneItem[]
+  beastLootDrops BeastLootDrop[]
+  recipeIngredients RecipeIngredient[]
+  craftingRecipes CraftingRecipe[]
+  
+  @@map("items")
+}
+
+// User's inventory
+model InventoryItem {
+  id        String   @id @default(cuid())
+  userId    String
+  itemId    String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, itemId])
+  @@map("inventory_items")
+}
+
+// User's equipment inventory
+model UserEquipment {
+  id          String   @id @default(cuid())
+  userId      String
+  equipmentId String
+  quantity    Int      @default(1)
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, equipmentId])
+  @@map("user_equipment")
+}
+
+// Zones where players can explore
+model Zone {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  minLevel    Int      @default(1)
+  maxLevel    Int      @default(100)
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  zoneItems ZoneItem[]
+  
+  @@map("zones")
+}
+
+// Items that can be found in each zone
+model ZoneItem {
+  id       String @id @default(cuid())
+  zoneId   String
+  itemId   String
+  dropRate Float  // Percentage chance (0.0 to 1.0)
+  
+  // Relationships
+  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  
+  @@unique([zoneId, itemId])
+  @@map("zone_items")
+}
+
+// Collections that players can complete
+model Collection {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  reward      Int      // Coin reward for completion
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  collectionItems CollectionItem[]
+  userCollections UserCollection[]
+  
+  @@map("collections")
+}
+
+// Items that belong to collections
+model CollectionItem {
+  id           String @id @default(cuid())
+  collectionId String
+  itemId       String
+  
+  // Relationships
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  item       Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  
+  @@unique([collectionId, itemId])
+  @@map("collection_items")
+}
+
+// User's completed collections
+model UserCollection {
+  id           String   @id @default(cuid())
+  userId       String
+  collectionId String
+  completedAt  DateTime @default(now())
+  
+  // Relationships
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, collectionId])
+  @@map("user_collections")
+}
+
+// Brushes that reduce explore cooldown
+model Brush {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  multiplier  Float    // Cooldown multiplier (0.25 = 75% reduction)
+  price       Int      // Cost in coins
+  tier        Int      // Higher tier = better brush
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  userBrushes UserBrush[]
+  
+  @@map("brushes")
+}
+
+// User's owned brushes
+model UserBrush {
+  id        String   @id @default(cuid())
+  userId    String
+  brushId   String
+  createdAt DateTime @default(now())
+  
+  // Relationships
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brush Brush @relation(fields: [brushId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, brushId])
+  @@map("user_brushes")
+}
+
+// Maps that increase drop chances for better items
+model Map {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  dropMultiplier Float  // Multiplier for drop rates (1.5 = 50% increase)
+  price       Int      // Cost in coins
+  tier        Int      // Higher tier = better map
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  userMaps UserMap[]
+  
+  @@map("maps")
+}
+
+// User's owned maps
+model UserMap {
+  id        String   @id @default(cuid())
+  userId    String
+  mapId     String
+  createdAt DateTime @default(now())
+  
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  map  Map  @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, mapId])
+  @@map("user_maps")
+}
+
+// Achievements that players can unlock
+model Achievement {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  category    String   // exploration, collection, economic, level, etc.
+  requirement String   // JSON string describing the requirement
+  requirementValue Int // Numeric value for the requirement
+  rewardTitle String?  // Title unlocked when achievement is completed
+  rewardCoins Int      @default(0) // Coin reward for completion
+  rewardXP   Int       @default(0) // XP reward for completion
+  isHidden   Boolean   @default(false) // Hidden achievements
+  createdAt  DateTime  @default(now())
+  
+  // Relationships
+  userAchievements UserAchievement[]
+  hiddenDiscoveries HiddenAchievementDiscovery[]
+  
+  @@map("achievements")
+}
+
+// User's unlocked achievements
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  progress      Int      @default(0) // Current progress toward achievement
+  isCompleted   Boolean  @default(false)
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  
+  // Achievement statistics
+  firstProgressAt DateTime? // When progress was first made
+  lastProgressAt  DateTime? // When progress was last updated
+  
+  // Relationships
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+// Titles that players can earn
+model Title {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  category    String   // achievement, rarity, special, etc.
+  rarity      String   // common, uncommon, rare, legendary, mythic
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  userTitles UserTitle[]
+  
+  @@map("titles")
+}
+
+// User's earned titles
+model UserTitle {
+  id        String   @id @default(cuid())
+  userId    String
+  titleId   String
+  isEquipped Boolean  @default(false)
+  earnedAt  DateTime @default(now())
+  
+  // Relationships
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title Title @relation(fields: [titleId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, titleId])
+  @@map("user_titles")
+}
+
+// Achievement challenges and events
+model AchievementChallenge {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  category    String   // daily, weekly, seasonal, special
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  rewardCoins Int      @default(0)
+  rewardXP    Int      @default(0)
+  rewardTitle String?
+  maxParticipants Int? // null = unlimited
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  challengeProgress UserChallengeProgress[]
+  
+  @@map("achievement_challenges")
+}
+
+// User's progress on challenges
+model UserChallengeProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  challengeId String
+  progress  Int      @default(0)
+  isCompleted Boolean @default(false)
+  completedAt DateTime?
+  startedAt  DateTime @default(now())
+  
+  // Relationships
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge AchievementChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, challengeId])
+  @@map("user_challenge_progress")
+}
+
+// Hidden achievement discovery tracking
+model HiddenAchievementDiscovery {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  discoveredAt  DateTime @default(now())
+  hintUsed      Boolean  @default(false)
+  hintUsedAt    DateTime?
+  
+  // Relationships
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, achievementId])
+  @@map("hidden_achievement_discoveries")
+}
+
+// Beast model
+model Beast {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  baseHp      Int      @default(100)
+  baseAttack  Int      @default(10)
+  baseDefense Int      @default(5)
+  rarity      Rarity
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  beastLootDrops BeastLootDrop[]
+  
+  @@map("beasts")
+}
+
+// Beast loot drops
+model BeastLootDrop {
+  id        String   @id @default(cuid())
+  beastId   String
+  itemId    String
+  dropRate  Float    // Percentage chance (0.0 to 1.0)
+  createdAt DateTime @default(now())
+  
+  // Relationships
+  beast Beast @relation(fields: [beastId], references: [id], onDelete: Cascade)
+  item  Item  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  
+  @@unique([beastId, itemId])
+  @@map("beast_loot_drops")
+}
+
+// Boss defeat tracking
+model BossDefeat {
+  id         String   @id @default(cuid())
+  userId     String
+  bossName   String
+  defeatedAt DateTime @default(now())
+  
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("boss_defeats")
+}
+
+// Server boss defeat tracking
+model ServerBossDefeat {
+  id              String   @id @default(cuid())
+  guildId         String
+  bossName        String
+  defeatedByUserId String
+  defeatedAt      DateTime @default(now())
+  
+  @@map("server_boss_defeats")
+}
+
+// Enum for item rarity
+enum Rarity {
+  COMMON
+  UNCOMMON
+  RARE
+  LEGENDARY
+  MYTHIC
+  ASCENDED
+}
+
+// Enum for skill types
+enum SkillType {
+  ACTIVE
+  PASSIVE
+  ULTIMATE
+}
+
+// Enum for skill categories
+enum SkillCategory {
+  COMBAT
+  EXPLORATION
+  CRAFTING
+  UTILITY
+}
+
+// Enum for equipment types
+enum EquipmentType {
+  WEAPON
+  ARMOR
+  ACCESSORY
+  BOSS_GEAR
+}
+
+// Enum for equipment slots
+enum EquipmentSlot {
+  WEAPON
+  HEAD
+  CHEST
+  LEGS
+  FEET
+  ACCESSORY_1
+  ACCESSORY_2
+}
+
+// Crafting recipes
+model CraftingRecipe {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  resultItemId String?
+  resultEquipmentId String?
+  resultQuantity Int    @default(1)
+  craftingCost Int     @default(0)
+  requiredLevel Int    @default(1)
+  category    String   // 'combination', 'gear', 'accessory', 'boss', 'cross-zone'
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  resultItem  Item?     @relation(fields: [resultItemId], references: [id], onDelete: Cascade)
+  resultEquipment Equipment? @relation(fields: [resultEquipmentId], references: [id], onDelete: Cascade)
+  recipeIngredients RecipeIngredient[]
+  userCraftingProgress UserCraftingProgress[]
+  stationRecipes StationRecipe[]
+  
+  @@map("crafting_recipes")
+}
+
+// Recipe ingredients
+model RecipeIngredient {
+  id        String   @id @default(cuid())
+  recipeId  String
+  itemId    String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  
+  // Relationships
+  recipe    CraftingRecipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  item      Item           @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  
+  @@unique([recipeId, itemId])
+  @@map("recipe_ingredients")
+}
+
+// Crafting stations
+model CraftingStation {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  location    String   // 'main_menu', 'zone_specific', 'guild_hall'
+  unlockCost  Int      @default(0)
+  requiredLevel Int    @default(1)
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  stationRecipes StationRecipe[]
+  userStations   UserCraftingStation[]
+  
+  @@map("crafting_stations")
+}
+
+// Station-Recipe relationships
+model StationRecipe {
+  id        String   @id @default(cuid())
+  stationId String
+  recipeId  String
+  createdAt DateTime @default(now())
+  
+  // Relationships
+  station   CraftingStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  recipe    CraftingRecipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  
+  @@unique([stationId, recipeId])
+  @@map("station_recipes")
+}
+
+// User's unlocked crafting stations
+model UserCraftingStation {
+  id        String   @id @default(cuid())
+  userId    String
+  stationId String
+  unlockedAt DateTime @default(now())
+  
+  // Relationships
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  station   CraftingStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, stationId])
+  @@map("user_crafting_stations")
+}
+
+// User's crafting progress
+model UserCraftingProgress {
+  id           String   @id @default(cuid())
+  userId       String
+  recipeId     String
+  timesCrafted Int      @default(0)
+  masteryLevel Int      @default(0)
+  lastCrafted  DateTime?
+  createdAt    DateTime @default(now())
+  
+  // Relationships
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe       CraftingRecipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, recipeId])
+  @@map("user_crafting_progress")
+}

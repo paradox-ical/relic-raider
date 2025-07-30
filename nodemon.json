@@ -1,0 +1,21 @@
+{
+  "watch": [
+    "index.js",
+    "shard-manager.js",
+    "commands/",
+    "lib/",
+    "events/"
+  ],
+  "ignore": [
+    "node_modules/",
+    "prisma/migrations/",
+    "*.log",
+    "*.sql",
+    ".env"
+  ],
+  "ext": "js,json",
+  "delay": "1000",
+  "env": {
+    "NODE_ENV": "development"
+  }
+} 

@@ -1,0 +1,25 @@
+Class,Branch,Skill Name,Type,Description
+Paladin,Guardian’s Oath,Stoneheart,Passive,+10% Max HP
+Paladin,Guardian’s Oath,Bulwark,Passive,Reduce damage taken when HP < 30%
+Paladin,Guardian’s Oath,Sanctified Armor,Passive,Regenerate 5% HP each turn
+Paladin,Guardian’s Oath,Shield Bash,Active,Deal damage and reduce enemy damage by 25% for 1 turn
+Paladin,Guardian’s Oath,Aegis Charge,Active,Block next attack and reflect 50% of damage
+Paladin,Guardian’s Oath,Defender’s Will,Active,Gain a temporary shield that absorbs 20% of max HP
+Paladin,Guardian’s Oath,Steadfast Recovery,Active,Cleanse 1 debuff and restore 10% HP
+Paladin,Guardian’s Oath,Titan’s Endurance,Ultimate,Become immune to all damage for 1 turn
+Paladin,Crusader’s Fury,Smite,Passive,+10% damage vs Bosses
+Paladin,Crusader’s Fury,Crusade,Passive,+5% Attack Speed
+Paladin,Crusader’s Fury,Glory Strike,Passive,+5% Crit Damage
+Paladin,Crusader’s Fury,Hammerfall,Active,Heavy strike that reduces enemy defense by 20% for 2 turns
+Paladin,Crusader’s Fury,Righteous Slam,Active,Bonus damage if your HP is above 75%
+Paladin,Crusader’s Fury,Holy Flame,Active,Burns enemy for 3 turns
+Paladin,Crusader’s Fury,Crushing Verdict,Active,Deals bonus damage if enemy HP is under 30%
+Paladin,Crusader’s Fury,Heaven’s Wrath,Ultimate,Massive holy damage with 50% chance to stun
+Paladin,Lightbound Path,Radiant Shield,Passive,Heal 5% HP when using a defensive skill
+Paladin,Lightbound Path,Inner Light,Passive,Slightly boosts XP gain from battles
+Paladin,Lightbound Path,Daylight Aura,Passive,Stats +10% during day cycles
+Paladin,Lightbound Path,Sunfire,Active,Restore 15% HP
+Paladin,Lightbound Path,Divine Touch,Active,Cleanse a debuff and heal 10% HP
+Paladin,Lightbound Path,Solar Beacon,Active,Boost defense by 25% for 3 turns
+Paladin,Lightbound Path,Lightstep,Active,Reduces cooldown of your last skill by 1 second
+Paladin,Lightbound Path,Beacon of Hope,Ultimate,Fully heal and cleanse all debuffs

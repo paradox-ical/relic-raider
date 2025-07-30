@@ -1,0 +1,25 @@
+Class,Branch,Skill Name,Type,Description
+Hunter,Beast Mastery,Tracker’s Guile,Passive,+5% chance for beasts to drop extra loot
+Hunter,Beast Mastery,Beast Instinct,Passive,Detect enemy weaknesses for bonus crit chance
+Hunter,Beast Mastery,Trophy Seeker,Passive,+10% gold earned from beast kills
+Hunter,Beast Mastery,Spirit Howl,Active,Boost all stats by 10% for 2 turns
+Hunter,Beast Mastery,Call of the Wild,Active,Deal extra damage against nature-type beasts
+Hunter,Beast Mastery,Feral Drive,Active,Next 2 attacks deal bonus damage
+Hunter,Beast Mastery,Prime Focus,Active,Guaranteed crit on next hit
+Hunter,Beast Mastery,Predator's Apex,Ultimate,Massive bonus damage to beasts and guaranteed loot bonus
+Hunter,Wild Precision,Eagle Eye,Passive,+10% accuracy
+Hunter,Wild Precision,True Aim,Passive,+15% headshot (crit) chance
+Hunter,Wild Precision,Quickdraw,Passive,-0.5s cooldown reduction on critical hits
+Hunter,Wild Precision,Piercing Shot,Active,Ignore 25% of enemy armour
+Hunter,Wild Precision,Volley,Active,Strike twice at reduced power
+Hunter,Wild Precision,Bleed Arrow,Active,Apply bleed over 3 turns
+Hunter,Wild Precision,Snare Shot,Active,"Slow enemy, reducing damage by 15%"
+Hunter,Wild Precision,Deadeye Vortex,Ultimate,"Guaranteed crit, double damage, ignore all defense"
+Hunter,Trapcraft,Snare Expert,Passive,+15% trap effectiveness
+Hunter,Trapcraft,Tripwire Reflexes,Passive,Avoid first hit every 5 turns
+Hunter,Trapcraft,Scavenger’s Cunning,Passive,+10% chance to find rare crafting materials
+Hunter,Trapcraft,Explosive Trap,Active,Apply delayed damage bomb to enemy
+Hunter,Trapcraft,Entangling Net,Active,Stuns the enemy for 1 turn
+Hunter,Trapcraft,Blinding Powder,Active,Reduce enemy accuracy by 30% for 2 turns
+Hunter,Trapcraft,Spiked Pit,Active,Deal damage and lower enemy defence by 10%
+Hunter,Trapcraft,Master Tactician,Ultimate,All trap effects activate at once with no cooldowns

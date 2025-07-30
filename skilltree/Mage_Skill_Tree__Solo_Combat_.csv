@@ -1,0 +1,25 @@
+Class,Branch,Skill Name,Type,Description
+Mage,Elementalism,Arcane Focus,Passive,+10% magic damage
+Mage,Elementalism,Mana Conduit,Passive,Gain 1s cooldown reduction every 3 turns
+Mage,Elementalism,Essence Flow,Passive,Regenerate 5% mana after each attack
+Mage,Elementalism,Flame Burst,Active,Deal fire damage and apply burn for 2 turns
+Mage,Elementalism,Frost Lance,Active,Deal ice damage and reduce enemy attack speed
+Mage,Elementalism,Storm Spike,Active,Deal lightning damage with a 20% chance to stun
+Mage,Elementalism,Void Pulse,Active,High damage magic blast that ignores defense
+Mage,Elementalism,Cataclysm,Ultimate,Unleash all elements for massive damage
+Mage,Runeweaving,Sigil of Might,Passive,+10% magic penetration
+Mage,Runeweaving,Energised Glyph,Passive,Cooldowns recover 10% faster
+Mage,Runeweaving,Arcane Barrier,Passive,Gain a 5% damage shield every 4 turns
+Mage,Runeweaving,Seal of Weakening,Active,Reduce enemy damage by 20% for 2 turns
+Mage,Runeweaving,Sigil of Flames,Active,Burns enemy for 3 turns
+Mage,Runeweaving,Ward of Ice,Active,Grants +15% defense for 2 turns
+Mage,Runeweaving,Glyph of Echoes,Active,Repeat your last damaging spell
+Mage,Runeweaving,Master Runeform,Ultimate,Double duration of all buffs/debuffs and refresh cooldowns
+Mage,Chronomancy,Temporal Flow,Passive,+5% chance to reset a cooldown after use
+Mage,Chronomancy,Accelerate,Passive,Your skills activate 0.5s faster
+Mage,Chronomancy,Chrono Shield,Passive,Survive fatal hit once every battle at 1 HP
+Mage,Chronomancy,Time Snap,Active,Deal damage and freeze enemy for 1 turn
+Mage,Chronomancy,Quickening,Active,Speed up next 2 actions (no cooldown)
+Mage,Chronomancy,Echo Rift,Active,Repeat last buff and recover 10% mana
+Mage,Chronomancy,Fracture,Active,"Time-locks enemy, delaying next action by 1 turn"
+Mage,Chronomancy,Reality Collapse,Ultimate,Erase enemy turn and gain an extra action immediately

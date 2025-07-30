@@ -1,0 +1,61 @@
+Class,Type,Name,Rarity,Crafting Recipe
+Paladin,Gear Set,Undying Set,Common,Coins + Uncommon Relic Shard x2 + Beast Claw x1
+Paladin,Gear Set,Stonewall Set,Common,Coins + Uncommon Relic Shard x2 + Beast Claw x1
+Paladin,Gear Set,Ironskin Set,Common,Coins + Uncommon Relic Shard x2 + Beast Claw x1
+Paladin,Gear Set,Tough Undying Set,Uncommon,Coins + Rare Beast Fang x2 + Runed Talisman x1
+Paladin,Gear Set,Gilded Stonewall Set,Uncommon,Coins + Rare Beast Fang x2 + Runed Talisman x1
+Paladin,Gear Set,Gleaming Ironskin Set,Uncommon,Coins + Rare Beast Fang x2 + Runed Talisman x1
+Paladin,Gear Set,Hardened Undying Set,Rare,Coins + Ancient Beast Core x2 + Runic Blade x1
+Paladin,Gear Set,Enchanted Stonewall Set,Rare,Coins + Ancient Beast Core x2 + Runic Blade x1
+Paladin,Gear Set,Battleworn Ironskin Set,Rare,Coins + Ancient Beast Core x2 + Runic Blade x1
+Paladin,Gear Set,Blazing Undying Set,Legendary,Coins + Fireheart Gem x2 + Primal Totem x1
+Paladin,Gear Set,Arcane Stonewall Set,Legendary,Coins + Fireheart Gem x2 + Primal Totem x1
+Paladin,Gear Set,Unbreakable Ironskin Set,Legendary,Coins + Fireheart Gem x2 + Primal Totem x1
+Paladin,Gear Set,Godforged Undying Set,Mythic,Coins + Ethereal Relic x2 + Shard of Ascension x1
+Paladin,Gear Set,Celestial Stonewall Set,Mythic,Coins + Ethereal Relic x2 + Shard of Ascension x1
+Paladin,Gear Set,Ascendant Ironskin Set,Mythic,Coins + Ethereal Relic x2 + Shard of Ascension x1
+Rogue,Gear Set,Silent Fang Set,Common,Coins + Uncommon Relic Shard x2 + Beast Claw x1
+Rogue,Gear Set,Shadowleaf Set,Common,Coins + Uncommon Relic Shard x2 + Beast Claw x1
+Rogue,Gear Set,Velvet Coil Set,Common,Coins + Uncommon Relic Shard x2 + Beast Claw x1
+Rogue,Gear Set,Tough Silent Fang Set,Uncommon,Coins + Rare Beast Fang x2 + Runed Talisman x1
+Rogue,Gear Set,Gilded Shadowleaf Set,Uncommon,Coins + Rare Beast Fang x2 + Runed Talisman x1
+Rogue,Gear Set,Gleaming Velvet Coil Set,Uncommon,Coins + Rare Beast Fang x2 + Runed Talisman x1
+Rogue,Gear Set,Hardened Silent Fang Set,Rare,Coins + Ancient Beast Core x2 + Runic Blade x1
+Rogue,Gear Set,Enchanted Shadowleaf Set,Rare,Coins + Ancient Beast Core x2 + Runic Blade x1
+Rogue,Gear Set,Battleworn Velvet Coil Set,Rare,Coins + Ancient Beast Core x2 + Runic Blade x1
+Rogue,Gear Set,Blazing Silent Fang Set,Legendary,Coins + Fireheart Gem x2 + Primal Totem x1
+Rogue,Gear Set,Arcane Shadowleaf Set,Legendary,Coins + Fireheart Gem x2 + Primal Totem x1
+Rogue,Gear Set,Unbreakable Velvet Coil Set,Legendary,Coins + Fireheart Gem x2 + Primal Totem x1
+Rogue,Gear Set,Godforged Silent Fang Set,Mythic,Coins + Ethereal Relic x2 + Shard of Ascension x1
+Rogue,Gear Set,Celestial Shadowleaf Set,Mythic,Coins + Ethereal Relic x2 + Shard of Ascension x1
+Rogue,Gear Set,Ascendant Velvet Coil Set,Mythic,Coins + Ethereal Relic x2 + Shard of Ascension x1
+Hunter,Gear Set,Trailwalker Set,Common,Coins + Uncommon Relic Shard x2 + Beast Claw x1
+Hunter,Gear Set,Snarehide Set,Common,Coins + Uncommon Relic Shard x2 + Beast Claw x1
+Hunter,Gear Set,Wolfsight Set,Common,Coins + Uncommon Relic Shard x2 + Beast Claw x1
+Hunter,Gear Set,Tough Trailwalker Set,Uncommon,Coins + Rare Beast Fang x2 + Runed Talisman x1
+Hunter,Gear Set,Gilded Snarehide Set,Uncommon,Coins + Rare Beast Fang x2 + Runed Talisman x1
+Hunter,Gear Set,Gleaming Wolfsight Set,Uncommon,Coins + Rare Beast Fang x2 + Runed Talisman x1
+Hunter,Gear Set,Hardened Trailwalker Set,Rare,Coins + Ancient Beast Core x2 + Runic Blade x1
+Hunter,Gear Set,Enchanted Snarehide Set,Rare,Coins + Ancient Beast Core x2 + Runic Blade x1
+Hunter,Gear Set,Battleworn Wolfsight Set,Rare,Coins + Ancient Beast Core x2 + Runic Blade x1
+Hunter,Gear Set,Blazing Trailwalker Set,Legendary,Coins + Fireheart Gem x2 + Primal Totem x1
+Hunter,Gear Set,Arcane Snarehide Set,Legendary,Coins + Fireheart Gem x2 + Primal Totem x1
+Hunter,Gear Set,Unbreakable Wolfsight Set,Legendary,Coins + Fireheart Gem x2 + Primal Totem x1
+Hunter,Gear Set,Godforged Trailwalker Set,Mythic,Coins + Ethereal Relic x2 + Shard of Ascension x1
+Hunter,Gear Set,Celestial Snarehide Set,Mythic,Coins + Ethereal Relic x2 + Shard of Ascension x1
+Hunter,Gear Set,Ascendant Wolfsight Set,Mythic,Coins + Ethereal Relic x2 + Shard of Ascension x1
+Mage,Gear Set,Dustwoven Set,Common,Coins + Uncommon Relic Shard x2 + Beast Claw x1
+Mage,Gear Set,Runespun Set,Common,Coins + Uncommon Relic Shard x2 + Beast Claw x1
+Mage,Gear Set,Kindling Robes,Common,Coins + Uncommon Relic Shard x2 + Beast Claw x1
+Mage,Gear Set,Tough Dustwoven Set,Uncommon,Coins + Rare Beast Fang x2 + Runed Talisman x1
+Mage,Gear Set,Gilded Runespun Set,Uncommon,Coins + Rare Beast Fang x2 + Runed Talisman x1
+Mage,Gear Set,Gleaming Kindling Robes,Uncommon,Coins + Rare Beast Fang x2 + Runed Talisman x1
+Mage,Gear Set,Hardened Dustwoven Set,Rare,Coins + Ancient Beast Core x2 + Runic Blade x1
+Mage,Gear Set,Enchanted Runespun Set,Rare,Coins + Ancient Beast Core x2 + Runic Blade x1
+Mage,Gear Set,Battleworn Kindling Robes,Rare,Coins + Ancient Beast Core x2 + Runic Blade x1
+Mage,Gear Set,Blazing Dustwoven Set,Legendary,Coins + Fireheart Gem x2 + Primal Totem x1
+Mage,Gear Set,Arcane Runespun Set,Legendary,Coins + Fireheart Gem x2 + Primal Totem x1
+Mage,Gear Set,Unbreakable Kindling Robes,Legendary,Coins + Fireheart Gem x2 + Primal Totem x1
+Mage,Gear Set,Godforged Dustwoven Set,Mythic,Coins + Ethereal Relic x2 + Shard of Ascension x1
+Mage,Gear Set,Celestial Runespun Set,Mythic,Coins + Ethereal Relic x2 + Shard of Ascension x1
+Mage,Gear Set,Ascendant Kindling Robes,Mythic,Coins + Ethereal Relic x2 + Shard of Ascension x1

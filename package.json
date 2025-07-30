@@ -1,0 +1,51 @@
+{
+  "name": "relic-raider",
+  "version": "1.0.0",
+  "description": "A Discord bot for an idle economy treasure hunting game",
+  "main": "index.js",
+  "scripts": {
+    "start": "node shard-manager.js",
+    "dev": "nodemon shard-manager.js",
+    "single": "node index.js",
+    "deploy": "node deploy-commands.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "node prisma/seed.js",
+    "db:seed-gear": "node prisma/seed-gear-and-crafting.js",
+    "db:seed-complete-gear": "node prisma/seed-complete-gear.js",
+    "db:seed-classes": "node prisma/seed-classes-and-skills.js",
+    "db:studio": "prisma studio",
+    "test:user-management": "node test-user-management.js",
+    "check:user-data": "node user-data-integrity-check.js all",
+    "update:skill-effects": "node update-skill-effects.js",
+    "test:damage-calculation": "node test-damage-calculation.js",
+    "test:interaction-handling": "node test-interaction-handling.js",
+    "test:crafting-debug": "node test-crafting-debug.js",
+    "test:crafting-simple": "node test-crafting-simple.js",
+    "test:interaction-fixes": "node test-interaction-fixes.js"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "game",
+    "economy",
+    "treasure"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@discordjs/builders": "^1.11.2",
+    "@discordjs/rest": "^2.5.1",
+    "@discordjs/voice": "^0.16.1",
+    "@prisma/client": "^6.12.0",
+    "discord.js": "^14.21.0",
+    "dotenv": "^16.6.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "prisma": "^6.12.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  }
+}

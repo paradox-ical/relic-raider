@@ -1,0 +1,102 @@
+Item_Name,Description,Rarity,Base_Value,Source_Type,Source_Name,Drop_Rate,Zone,Notes
+Tablet of Aztec,Ancient Aztec tablet with mysterious glyphs,COMMON,10,Exploration,Jungle Ruins,60%,Jungle Ruins,Zone exploration item
+Statue of Flame,Aztec statue representing the fire god,COMMON,10,Exploration,Jungle Ruins,60%,Jungle Ruins,Zone exploration item
+Relic of Time,Time-worn Aztec artifact,COMMON,10,Exploration,Jungle Ruins,60%,Jungle Ruins,Zone exploration item
+Tablet of Shadows,Dark tablet from Aztec rituals,COMMON,10,Exploration,Jungle Ruins,60%,Jungle Ruins,Zone exploration item
+Talisman of Flame,Aztec talisman of fire magic,COMMON,10,Exploration,Jungle Ruins,60%,Jungle Ruins,Zone exploration item
+Totem of Power,Aztec totem of strength,COMMON,10,Exploration,Jungle Ruins,60%,Jungle Ruins,Zone exploration item
+Statue of Shadows,Shadowy Aztec statue,COMMON,10,Exploration,Jungle Ruins,60%,Jungle Ruins,Zone exploration item
+Tablet of Wisdom,Aztec tablet of knowledge,COMMON,10,Exploration,Jungle Ruins,60%,Jungle Ruins,Zone exploration item
+Idol of Time,Aztec idol of time,COMMON,10,Exploration,Jungle Ruins,60%,Jungle Ruins,Zone exploration item
+Idol of Wisdom,Aztec wisdom idol,COMMON,10,Exploration,Jungle Ruins,60%,Jungle Ruins,Zone exploration item
+Coin of Aztec,Ancient Aztec coin,COMMON,10,Exploration,Jungle Ruins,60%,Jungle Ruins,Zone exploration item
+Totem of Aztec,Aztec tribal totem,COMMON,10,Exploration,Jungle Ruins,60%,Jungle Ruins,Zone exploration item
+Coin of Aztec,Aztec currency,UNCOMMON,40,Exploration,Jungle Ruins,30%,Jungle Ruins,Zone exploration item
+Coin of Wisdom,Aztec wisdom coin,UNCOMMON,40,Exploration,Jungle Ruins,30%,Jungle Ruins,Zone exploration item
+Tablet of Shadows,Aztec shadow tablet,UNCOMMON,40,Exploration,Jungle Ruins,30%,Jungle Ruins,Zone exploration item
+Totem of Aztec,Aztec power totem,UNCOMMON,40,Exploration,Jungle Ruins,30%,Jungle Ruins,Zone exploration item
+Coin of Power,Aztec power coin,UNCOMMON,40,Exploration,Jungle Ruins,30%,Jungle Ruins,Zone exploration item
+Relic of Wisdom,Aztec wisdom relic,UNCOMMON,40,Exploration,Jungle Ruins,30%,Jungle Ruins,Zone exploration item
+Talisman of Flame,Aztec flame talisman,RARE,120,Exploration,Jungle Ruins,8%,Jungle Ruins,Zone exploration item
+Statue of Time,Aztec time statue,RARE,120,Exploration,Jungle Ruins,8%,Jungle Ruins,Zone exploration item
+Idol of Power,Aztec power idol,RARE,120,Exploration,Jungle Ruins,8%,Jungle Ruins,Zone exploration item
+Totem of Wisdom,Aztec wisdom totem,RARE,120,Exploration,Jungle Ruins,8%,Jungle Ruins,Zone exploration item
+Idol of Time,Aztec time idol,RARE,120,Exploration,Jungle Ruins,8%,Jungle Ruins,Zone exploration item
+Charm of Flame,Aztec flame charm,LEGENDARY,400,Exploration,Jungle Ruins,1.50%,Jungle Ruins,Zone exploration item
+Coin of Power,Aztec power coin,LEGENDARY,400,Exploration,Jungle Ruins,1.50%,Jungle Ruins,Zone exploration item
+Tablet of Power,Aztec power tablet,MYTHIC,1200,Exploration,Jungle Ruins,0.50%,Jungle Ruins,Zone exploration item
+Beast Claw,A sharp claw from a defeated beast,COMMON,15,Beast,Twisted Serpent of Aztec,100%,Jungle Ruins,Beast loot drop
+Frayed Hide,Tattered hide from a beast,COMMON,15,Beast,Twisted Serpent of Aztec,100%,Jungle Ruins,Beast loot drop
+Mossy Charm,A charm covered in ancient moss,COMMON,15,Beast,Twisted Serpent of Aztec,100%,Jungle Ruins,Beast loot drop
+Duskwalker Idol,An idol of the duskwalker,UNCOMMON,45,Beast,Ancient Stalker of Aztec,100%,Jungle Ruins,Beast loot drop
+Bone Carving,An intricately carved bone,UNCOMMON,45,Beast,Ancient Stalker of Aztec,100%,Jungle Ruins,Beast loot drop
+Runed Talisman,A talisman covered in ancient runes,UNCOMMON,45,Beast,Ancient Stalker of Aztec,100%,Jungle Ruins,Beast loot drop
+Sealed Coin,A coin sealed with ancient magic,UNCOMMON,45,Beast,Ancient Stalker of Aztec,100%,Jungle Ruins,Beast loot drop
+Rare Beast Fang,A rare fang from a powerful beast,RARE,125,Beast,Barbed Construct of Aztec,100%,Jungle Ruins,Beast loot drop
+Echoing Horn,A horn that echoes with ancient power,RARE,125,Beast,Barbed Construct of Aztec,100%,Jungle Ruins,Beast loot drop
+Fireheart Gem,A gem that burns with eternal flame,RARE,125,Beast,Barbed Construct of Aztec,100%,Jungle Ruins,Beast loot drop
+Runic Blade,A blade inscribed with powerful runes,RARE,125,Beast,Barbed Construct of Aztec,100%,Jungle Ruins,Beast loot drop
+Ancient Beast Core,The core of an ancient beast,LEGENDARY,405,Beast,Savage Construct of Aztec,100%,Jungle Ruins,Beast loot drop
+Primal Totem,A totem of primal power,LEGENDARY,405,Beast,Savage Construct of Aztec,100%,Jungle Ruins,Beast loot drop
+Mythic Beast Bone,A bone from a mythic beast,MYTHIC,1205,Beast,Savage Construct of Aztec,100%,Jungle Ruins,Beast loot drop
+Ethereal Relic,A relic that exists between worlds,MYTHIC,1205,Beast,Savage Construct of Aztec,100%,Jungle Ruins,Beast loot drop
+Shard of Ascension,A shard that holds the power of ascension,MYTHIC,1205,Beast,Savage Construct of Aztec,100%,Jungle Ruins,Beast loot drop
+Veilstone,A stone that can pierce the veil between realms,MYTHIC,1205,Beast,Savage Construct of Aztec,100%,Jungle Ruins,Beast loot drop
+Crown of Vaelith,The legendary crown of Vaelith ruler of the Aztec realm,MYTHIC,2000,Boss,Ancient Guardian of the Jungle,25%,Jungle Ruins,Boss specific loot
+Crown of Vaelith Fragment,A fragment of the legendary Crown of Vaelith,LEGENDARY,500,Boss,Ancient Guardian of the Jungle,50%,Jungle Ruins,Boss specific loot
+Astral Sigil,A sigil that channels astral power,MYTHIC,1205,Boss,Ancient Guardian of the Jungle,100%,Jungle Ruins,Boss loot drop
+Ethereal Relic,A relic that exists between worlds,MYTHIC,1205,Boss,Ancient Guardian of the Jungle,100%,Jungle Ruins,Boss loot drop
+Charm of Shadows,Norse shadow charm,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Coin of Norse,Ancient Norse coin,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Statue of Wisdom,Norse wisdom statue,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Relic of Power,Norse power relic,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Idol of Flame,Norse flame idol,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Coin of Flame,Norse flame coin,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Tablet of Flame,Norse flame tablet,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Totem of Power,Norse power totem,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Talisman of Norse,Norse talisman,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Tablet of Time,Norse time tablet,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Charm of Wisdom,Norse wisdom charm,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Coin of Power,Norse power coin,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Tablet of Wisdom,Norse wisdom tablet,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Talisman of Wisdom,Norse wisdom talisman,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Relic of Time,Norse time relic,COMMON,10,Exploration,Frozen Crypt,60%,Frozen Crypt,Zone exploration item
+Idol of Norse,Norse idol,UNCOMMON,40,Exploration,Frozen Crypt,30%,Frozen Crypt,Zone exploration item
+Relic of Norse,Norse relic,UNCOMMON,40,Exploration,Frozen Crypt,30%,Frozen Crypt,Zone exploration item
+Talisman of Norse,Norse talisman,UNCOMMON,40,Exploration,Frozen Crypt,30%,Frozen Crypt,Zone exploration item
+Statue of Power,Norse power statue,UNCOMMON,40,Exploration,Frozen Crypt,30%,Frozen Crypt,Zone exploration item
+Relic of Power,Norse power relic,UNCOMMON,40,Exploration,Frozen Crypt,30%,Frozen Crypt,Zone exploration item
+Coin of Wisdom,Norse wisdom coin,UNCOMMON,40,Exploration,Frozen Crypt,30%,Frozen Crypt,Zone exploration item
+Tablet of Norse,Norse tablet,UNCOMMON,40,Exploration,Frozen Crypt,30%,Frozen Crypt,Zone exploration item
+Coin of Power,Norse power coin,RARE,120,Exploration,Frozen Crypt,8%,Frozen Crypt,Zone exploration item
+Statue of Shadows,Norse shadow statue,RARE,120,Exploration,Frozen Crypt,8%,Frozen Crypt,Zone exploration item
+Relic of Shadows,Norse shadow relic,RARE,120,Exploration,Frozen Crypt,8%,Frozen Crypt,Zone exploration item
+Statue of Power,Norse power statue,RARE,120,Exploration,Frozen Crypt,8%,Frozen Crypt,Zone exploration item
+Coin of Shadows,Norse shadow coin,RARE,120,Exploration,Frozen Crypt,8%,Frozen Crypt,Zone exploration item
+Talisman of Wisdom,Norse wisdom talisman,LEGENDARY,400,Exploration,Frozen Crypt,1.50%,Frozen Crypt,Zone exploration item
+Relic of Wisdom,Norse wisdom relic,LEGENDARY,400,Exploration,Frozen Crypt,1.50%,Frozen Crypt,Zone exploration item
+Coin of Flame,Norse flame coin,MYTHIC,1200,Exploration,Frozen Crypt,0.50%,Frozen Crypt,Zone exploration item
+Cracked Fang,A broken fang from a beast,COMMON,15,Beast,Ancient Phantom of Norse,100%,Frozen Crypt,Beast loot drop
+Mossy Charm,A charm covered in ancient moss,COMMON,15,Beast,Ancient Phantom of Norse,100%,Frozen Crypt,Beast loot drop
+Frayed Hide,Tattered hide from a beast,COMMON,15,Beast,Ancient Phantom of Norse,100%,Frozen Crypt,Beast loot drop
+Rare Beast Fang,A rare fang from a powerful beast,RARE,125,Beast,Barbed Construct of Norse,100%,Frozen Crypt,Beast loot drop
+Runed Talisman,A talisman covered in ancient runes,RARE,125,Beast,Barbed Construct of Norse,100%,Frozen Crypt,Beast loot drop
+Duskwalker Idol,An idol of the duskwalker,RARE,125,Beast,Barbed Construct of Norse,100%,Frozen Crypt,Beast loot drop
+Runed Talisman,A talisman covered in ancient runes,RARE,125,Beast,Lurking Stalker of Norse,100%,Frozen Crypt,Beast loot drop
+Sealed Coin,A coin sealed with ancient magic,RARE,125,Beast,Lurking Stalker of Norse,100%,Frozen Crypt,Beast loot drop
+Bone Carving,An intricately carved bone,RARE,125,Beast,Lurking Stalker of Norse,100%,Frozen Crypt,Beast loot drop
+Fireheart Gem,A gem that burns with eternal flame,LEGENDARY,405,Beast,Savage Phantom of Norse,100%,Frozen Crypt,Beast loot drop
+Runic Blade,A blade inscribed with powerful runes,LEGENDARY,405,Beast,Savage Phantom of Norse,100%,Frozen Crypt,Beast loot drop
+Ancient Beast Core,The core of an ancient beast,LEGENDARY,405,Beast,Savage Phantom of Norse,100%,Frozen Crypt,Beast loot drop
+Echoing Horn,A horn that echoes with ancient power,LEGENDARY,405,Beast,Savage Phantom of Norse,100%,Frozen Crypt,Beast loot drop
+Echoing Horn,A horn that echoes with ancient power,LEGENDARY,405,Beast,Savage Serpent of Norse,100%,Frozen Crypt,Beast loot drop
+Fireheart Gem,A gem that burns with eternal flame,LEGENDARY,405,Beast,Savage Serpent of Norse,100%,Frozen Crypt,Beast loot drop
+Primal Totem,A totem of primal power,LEGENDARY,405,Beast,Savage Serpent of Norse,100%,Frozen Crypt,Beast loot drop
+Runic Blade,A blade inscribed with powerful runes,LEGENDARY,405,Beast,Savage Serpent of Norse,100%,Frozen Crypt,Beast loot drop
+Astral Sigil,A sigil that channels astral power,MYTHIC,1205,Beast,Savage Phantom of Norse,100%,Frozen Crypt,Beast loot drop
+Shard of Ascension,A shard that holds the power of ascension,MYTHIC,1205,Beast,Savage Phantom of Norse,100%,Frozen Crypt,Beast loot drop
+Ethereal Relic,A relic that exists between worlds,MYTHIC,1205,Beast,Savage Phantom of Norse,100%,Frozen Crypt,Beast loot drop
+Heart of the Frozen Titan,The frozen heart of an ancient Norse titan,MYTHIC,2000,Boss,Frost Giant King,25%,Frozen Crypt,Boss specific loot
+Heart of the Frozen Titan Fragment,A fragment of the Heart of the Frozen Titan,LEGENDARY,500,Boss,Frost Giant King,50%,Frozen Crypt,Boss specific loot
+Mythic Beast Bone,A bone from a mythic beast,MYTHIC,1205,Boss,Frost Giant King,100%,Frozen Crypt,Boss loot drop
+Shard of Ascension,A shard that holds the power of ascension,MYTHIC,1205,Boss,Frost Giant King,100%,Frozen Crypt,Boss loot drop 
